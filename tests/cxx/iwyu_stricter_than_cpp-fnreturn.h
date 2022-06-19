@@ -14,6 +14,7 @@
 // (2) do not directly #include the definition of the relevant type.
 
 #include "tests/cxx/iwyu_stricter_than_cpp-d1.h"
+#include "tests/cxx/iwyu_stricter_than_cpp-d4.h"
 
 // --- Return values of functions.
 
@@ -61,6 +62,24 @@ TplIndirectStruct2<int> TplDoesEverythingRightFn();
 template <> struct TplIndirectStruct2<float>;
 TplIndirectStruct2<float> TplDoesEverythingRightAgainFn();
 
+// --- With user-defined types as template parameters.
+
+// struct IndirectStruct2; (fwd-declared above)
+template <typename, typename>
+struct TplIndirectStruct3;
+
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
+TplIndirectStruct3<IndirectStruct1, IndirectStruct2>
+TplOnlyArgumentTypeProvidedFn();
+
+TplIndirectStruct3<IndirectStruct2, IndirectStruct2> TplAllForwardDeclaredFn();
+
+// IWYU: IndirectStruct1 is...*iwyu_stricter_than_cpp-i1.h.*for fn return type
+TplDirectStruct3<IndirectStruct1, IndirectStruct2>
+TplAllNeededTypesProvidedFn();
+
+TplDirectStruct3<IndirectStruct2, IndirectStruct2> TplOnlyTemplateProvidedFn();
+
 // --- The rules do not apply for friend functions.
 
 struct FnreturnStruct {
@@ -68,6 +87,8 @@ struct FnreturnStruct {
   friend const IndirectStruct1& ClassFn1();
   // IWYU: TplIndirectStruct1 needs a declaration
   friend TplIndirectStruct1<char> ClassFn2();
+  // IWYU: IndirectStruct1 needs a declaration
+  friend TplIndirectStruct3<IndirectStruct1, IndirectStruct2> ClassFn3();
 };
 
 
@@ -83,8 +104,10 @@ tests/cxx/iwyu_stricter_than_cpp-fnreturn.h should remove these lines:
 
 The full include-list for tests/cxx/iwyu_stricter_than_cpp-fnreturn.h:
 #include "tests/cxx/iwyu_stricter_than_cpp-d1.h"  // for DirectStruct1, DirectStruct2, TplDirectStruct1, TplDirectStruct2
+#include "tests/cxx/iwyu_stricter_than_cpp-d4.h"  // for TplDirectStruct3
 #include "tests/cxx/iwyu_stricter_than_cpp-i1.h"  // for IndirectStruct1, IndirectStructForwardDeclaredInD1, TplIndirectStruct1, TplIndirectStructForwardDeclaredInD1
 struct IndirectStruct2;  // lines XX-XX
 template <typename T> struct TplIndirectStruct2;  // lines XX-XX
+template <typename, typename> struct TplIndirectStruct3;  // lines XX-XX+1
 
 ***** IWYU_SUMMARY */
