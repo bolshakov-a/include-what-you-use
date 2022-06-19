@@ -243,6 +243,34 @@ void TestFunctionReturn() {
   // IWYU: TplIndirectStruct2 needs a declaration
   // IWYU: TplIndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   const TplIndirectStruct2<float>& tis2b = TplDoesEverythingRightAgainFn();
+
+  // --- With user-defined types as template parameters.
+
+  // IWYU: IndirectStruct1 needs a declaration
+  // IWYU: IndirectStruct2 needs a declaration
+  // IWYU: TplIndirectStruct3 needs a declaration
+  const TplIndirectStruct3<IndirectStruct1, IndirectStruct2>& tis3a =
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      TplOnlyArgumentTypeProvidedFn();
+
+  // IWYU: IndirectStruct2 needs a declaration
+  // IWYU: TplIndirectStruct3 needs a declaration
+  const TplIndirectStruct3<IndirectStruct2, IndirectStruct2>& tis3b =
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      TplAllForwardDeclaredFn();
+
+  // IWYU: IndirectStruct1 needs a declaration
+  // IWYU: IndirectStruct2 needs a declaration
+  // IWYU: TplDirectStruct3 needs a declaration
+  const TplDirectStruct3<IndirectStruct1, IndirectStruct2>& tds3a =
+      TplAllNeededTypesProvidedFn();
+
+  // IWYU: TplDirectStruct3 needs a declaration
+  // IWYU: IndirectStruct2 needs a declaration
+  const TplDirectStruct3<IndirectStruct2, IndirectStruct2>& tds3b =
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      TplOnlyTemplateProvidedFn();
 }
 
 /**** IWYU_SUMMARY
@@ -257,6 +285,7 @@ struct DirectStruct1;
 struct DirectStruct2;
 struct IndirectStruct1;
 struct IndirectStructForwardDeclaredInD1;
+template <typename T1, typename T2> struct TplDirectStruct3;
 template <typename T> struct TplDirectStruct1;
 template <typename T> struct TplDirectStruct2;
 template <typename T> struct TplIndirectStruct1;
@@ -271,7 +300,7 @@ The full include-list for tests/cxx/iwyu_stricter_than_cpp.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/iwyu_stricter_than_cpp-autocast.h"  // for Fn, TplFn
 #include "tests/cxx/iwyu_stricter_than_cpp-d3.h"  // for IndirectStruct3ProvidingAl, IndirectStruct3ProvidingTypedef, IndirectStruct4ProvidingAl, IndirectStruct4ProvidingTypedef
-#include "tests/cxx/iwyu_stricter_than_cpp-fnreturn.h"  // for DoesEverythingRightFn, DoesNotForwardDeclareAndIncludesFn, DoesNotForwardDeclareFn, DoesNotForwardDeclareProperlyFn, IncludesFn, TplDoesEverythingRightAgainFn, TplDoesEverythingRightFn, TplDoesNotForwardDeclareAndIncludesFn, TplDoesNotForwardDeclareFn, TplDoesNotForwardDeclareProperlyFn, TplIncludesFn
+#include "tests/cxx/iwyu_stricter_than_cpp-fnreturn.h"  // for DoesEverythingRightFn, DoesNotForwardDeclareAndIncludesFn, DoesNotForwardDeclareFn, DoesNotForwardDeclareProperlyFn, IncludesFn, TplAllForwardDeclaredFn, TplAllNeededTypesProvidedFn, TplDoesEverythingRightAgainFn, TplDoesEverythingRightFn, TplDoesNotForwardDeclareAndIncludesFn, TplDoesNotForwardDeclareFn, TplDoesNotForwardDeclareProperlyFn, TplIncludesFn, TplOnlyArgumentTypeProvidedFn, TplOnlyTemplateProvidedFn
 #include "tests/cxx/iwyu_stricter_than_cpp-i2.h"  // for IndirectStruct2, TplIndirectStruct2
 #include "tests/cxx/iwyu_stricter_than_cpp-i3.h"  // for IndirectStruct3
 #include "tests/cxx/iwyu_stricter_than_cpp-i4.h"  // for IndirectStruct4
@@ -282,6 +311,7 @@ struct DirectStruct1;
 struct DirectStruct2;
 struct IndirectStruct1;
 struct IndirectStructForwardDeclaredInD1;
+template <typename T1, typename T2> struct TplDirectStruct3;
 template <typename T> struct TplDirectStruct1;
 template <typename T> struct TplDirectStruct2;
 template <typename T> struct TplIndirectStruct1;
