@@ -1656,6 +1656,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                                                  comment);
       }
     } else {
+      if (const auto* template_spec_type =
+              dyn_cast<TemplateSpecializationType>(type)) {
+        this->getDerived().ReportTemplateSpecTypeInternals(template_spec_type);
+      }
       if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
         decl = GetDefinitionAsWritten(decl);
         VERRS(6) << "(For type " << PrintableType(type) << "):\n";
@@ -2641,6 +2645,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   void AddProcessedOverloadLoc(SourceLocation loc) {
     visitor_state_->processed_overload_locs.insert(loc);
+  }
+
+  void ReportTemplateSpecTypeInternals(const TemplateSpecializationType*) {
   }
 
   // Do not add any variables here!  If you do, they will not be shared
@@ -4159,6 +4166,16 @@ class IwyuAstConsumer
         callee, parent_type,
         current_ast_node(), resugar_map);
     return true;
+  }
+
+  // --- Handler declared in IwyuBaseASTVisitor.
+
+  void ReportTemplateSpecTypeInternals(const TemplateSpecializationType* type) {
+    const map<const Type*, const Type*> resugar_map =
+        GetTplTypeResugarMapForClass(type);
+    ASTNode node(type);
+    node.SetParent(current_ast_node());
+    instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map);
   }
 
  private:
