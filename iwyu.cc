@@ -2979,8 +2979,8 @@ class InstantiatedTemplateVisitor
       return true;
     }
 
-    if (const auto* enum_type = dyn_cast<EnumType>(type))
-      return !CanBeOpaqueDeclared(enum_type);
+    if (isa<EnumType>(type))
+      return false;
 
     // If we're inside a typedef, we don't need our full type info --
     // in this case we follow what the C++ language allows and let
