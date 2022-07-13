@@ -24,8 +24,27 @@ class A {
     // IWYU: IndirectClass is...*indirect.h
     return &(_b[i]);
   }
+
+  // IWYU: IndirectTemplate needs a declaration
+  // IWYU: IndirectClass needs a declaration
+  IndirectTemplate<IndirectClass> *getIndirectTemplateSpecialization(int i) {
+    // IWYU: IndirectTemplate is...*indirect.h
+    // IWYU: IndirectClass is...*indirect.h
+    (void)sizeof(_t[i]);  // requires full type
+    // IWYU: IndirectTemplate needs a declaration
+    // IWYU: IndirectTemplate is...*indirect.h
+    // IWYU: IndirectClass is...*indirect.h
+    (void)sizeof(&(_t[i]));  // requires full type
+    // IWYU: IndirectTemplate is...*indirect.h
+    // IWYU: IndirectClass is...*indirect.h
+    return &(_t[i]);
+  }
+
   // IWYU: IndirectClass needs a declaration
   IndirectClass *_b;
+  // IWYU: IndirectTemplate needs a declaration
+  // IWYU: IndirectClass needs a declaration
+  IndirectTemplate<IndirectClass> *_t;
 };
 
 
@@ -38,6 +57,6 @@ tests/cxx/array.cc should remove these lines:
 - #include "tests/cxx/direct.h"  // lines XX-XX
 
 The full include-list for tests/cxx/array.cc:
-#include "tests/cxx/indirect.h"  // for IndirectClass
+#include "tests/cxx/indirect.h"  // for IndirectClass, IndirectTemplate
 
 ***** IWYU_SUMMARY */
