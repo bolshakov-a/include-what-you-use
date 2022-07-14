@@ -197,6 +197,16 @@ void TestAutocast() {
   // We need full type of is2 because the declarer of Fn didn't
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TplFn(6, 7, 8, 9, 10);
+
+  TplFn(
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      1,  // onlyArgumentTypeProvided
+      // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      2,  // allForwardDeclared
+      3,  // allNeededTypesProvided
+      // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+      4);  // onlyTemplateProvided
 }
 
 void TestFunctionReturn() {
