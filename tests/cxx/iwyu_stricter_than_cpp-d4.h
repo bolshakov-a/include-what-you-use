@@ -14,6 +14,11 @@
 
 template <typename T1, typename T2>
 struct TplDirectStruct3 {
+  TplDirectStruct3() = default;
+
+  TplDirectStruct3(int) {
+  }
+
   static constexpr auto s = sizeof(T1);
   T2* t2;
 };
