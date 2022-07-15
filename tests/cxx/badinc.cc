@@ -1856,7 +1856,7 @@ The full include-list for tests/cxx/badinc.cc:
 #include <setjmp.h>
 #include <stddef.h>  // for offsetof
 #include <algorithm>  // for find
-#include <fstream>  // for fstream
+#include <fstream>  // for basic_fstream, fstream
 #include <list>  // for list
 #include <string>  // for basic_string, operator+, string
 #include <typeinfo>  // for type_info

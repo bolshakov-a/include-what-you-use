@@ -1414,8 +1414,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return underlying_type;
   }
 
-  set<const Type*> GetCallerResponsibleTypesForTypedef(
-      const TypedefNameDecl* decl) {
+  set<const Type*> GetProvidedTypesForTypedef(const TypedefNameDecl* decl) {
     set<const Type*> retval;
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     // If the underlying type is itself a typedef, we recurse.
@@ -1424,22 +1423,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           = DynCastFrom(TypeToDeclAsWritten(underlying_typedef))) {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
-        // underlying type, do we want to return the empty set here?
-        return GetCallerResponsibleTypesForTypedef(underlying_typedef_decl);
+        // underlying type, do we want to return it here?
+        retval = GetProvidedTypesForTypedef(underlying_typedef_decl);
+        // Alias types should always be provided.
+        retval.insert(underlying_type);
+        return retval;
       }
     }
 
-    const Type* deref_type
-        = RemovePointersAndReferencesAsWritten(underlying_type);
-    if (isa<SubstTemplateTypeParmType>(deref_type) ||
-        CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl))) {
-      retval.insert(deref_type);
-      // TODO(csilvers): include template type-args if appropriate.
-      // This requires doing an iwyu visit of the instantiated
-      // underlying type and seeing which type-args we require full
-      // use for.  Also have to handle the case where the type-args
-      // are themselves templates.  It will require pretty substantial
-      // iwyu surgery.
+    for (const Type* type : GetComponentsOfType(underlying_type)) {
+      if (!isa<SubstTemplateTypeParmType>(type) &&
+          !CodeAuthorWantsJustAForwardDeclare(type, GetLocation(decl))) {
+        retval.insert(type);
+      }
     }
     return retval;
   }
@@ -1620,7 +1616,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // The comment, if not nullptr, is extra text that is included along
   // with the warning message that iwyu emits.
   virtual void ReportTypeUse(SourceLocation used_loc, const Type* type,
-                             const char* comment = nullptr) {
+                             const char* comment = nullptr,
+                             const set<const Type*>& types_to_block = {}) {
     // TODO(csilvers): figure out if/when calling CanIgnoreType() is correct.
     if (!type)
       return;
@@ -1641,18 +1638,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // underlying type.  Instead, users of that typedef are.
       if (!current_ast_node()->template ParentIsA<TypedefNameDecl>()) {
         const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
-        const set<const Type*>& underlying_types =
-            GetCallerResponsibleTypesForTypedef(typedef_decl);
-        if (!underlying_types.empty()) {
-          VERRS(6) << "User, not author, of typedef "
-                   << typedef_decl->getQualifiedNameAsString()
-                   << " owns the underlying type:\n";
-          // If any of the used types are themselves typedefs, this will
-          // result in a recursive expansion.  Note we are careful to
-          // recurse inside this class, and not go back to subclasses.
-          for (const Type* type : underlying_types)
-            IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, type);
-        }
+        const set<const Type*>& provided_types =
+            GetProvidedTypesForTypedef(typedef_decl);
+        VERRS(6) << "User, not author, of typedef "
+                 << typedef_decl->getQualifiedNameAsString()
+                 << " owns the underlying type:\n";
+        // If any of the used types are themselves typedefs, this will
+        // result in a recursive expansion.  Note we are careful to
+        // recurse inside this class, and not go back to subclasses.
+        const Type* type = RemovePointersAndReferencesAsWritten(
+            typedef_decl->getUnderlyingType().getTypePtr());
+        IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, type, nullptr,
+                                                   provided_types);
       }
     }
     // For the below, we want to be careful to call *our*
@@ -1667,8 +1664,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     } else {
       if (const auto* template_spec_type =
               dyn_cast<TemplateSpecializationType>(type)) {
-        this->getDerived().ReportTemplateSpecTypeInternals(template_spec_type);
+        this->getDerived().ReportTemplateSpecTypeInternals(template_spec_type,
+                                                           types_to_block);
       }
+      if (types_to_block.count(type))
+        return;
       if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
         decl = GetDefinitionAsWritten(decl);
         VERRS(6) << "(For type " << PrintableType(type) << "):\n";
@@ -2636,7 +2636,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     visitor_state_->processed_overload_locs.insert(loc);
   }
 
-  void ReportTemplateSpecTypeInternals(const TemplateSpecializationType*) {
+  void ReportTemplateSpecTypeInternals(
+      const TemplateSpecializationType*,
+      const set<const Type*>& /*types_to_block*/) {
   }
 
   // Do not add any variables here!  If you do, they will not be shared
@@ -2706,7 +2708,8 @@ class InstantiatedTemplateVisitor
   // type to the template type as written (or as close as we can find
   // to it).  If a type is not in resugar-map, it might be due to a
   // recursive template call and encode a template type we don't care
-  // about ourselves.  If it's in the resugar_map but with a nullptr
+  // about ourselves, or due to explicit exclusion of types that should
+  // not be reported.  If it's in the resugar_map but with a nullptr
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
   void ScanInstantiatedFunction(
@@ -2865,13 +2868,14 @@ class InstantiatedTemplateVisitor
   }
 
   void ReportTypeUse(SourceLocation used_loc, const Type* type,
-                     const char* comment = nullptr) override {
+                     const char* comment = nullptr,
+                     const set<const Type*>& types_to_block = {}) override {
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
     for (CacheStoringScope* storer : cache_storers_)
       storer->NoteReportedType(type);
-    Base::ReportTypeUse(caller_loc(), type, comment);
+    Base::ReportTypeUse(caller_loc(), type, comment, types_to_block);
   }
 
   //------------------------------------------------------------
@@ -4154,9 +4158,16 @@ class IwyuAstConsumer
 
   // --- Handler declared in IwyuBaseASTVisitor.
 
-  void ReportTemplateSpecTypeInternals(const TemplateSpecializationType* type) {
-    const map<const Type*, const Type*> resugar_map =
+  void ReportTemplateSpecTypeInternals(const TemplateSpecializationType* type,
+                                       const set<const Type*>& types_to_block) {
+    map<const Type*, const Type*> resugar_map =
         GetTplTypeResugarMapForClass(type);
+    for (auto it = resugar_map.begin(), ite = resugar_map.end(); it != ite;) {
+      if (types_to_block.count(it->second))
+        resugar_map.erase(it++);
+      else
+        ++it;
+    }
     ASTNode node(type);
     node.SetParent(current_ast_node());
     instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map);
