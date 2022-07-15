@@ -394,7 +394,7 @@ The full include-list for tests/cxx/badinc.h:
 #include <stdio.h>  // for NULL, printf
 #include <queue>  // for queue
 #include <set>  // for set
-#include <string>  // for string
+#include <string>  // for basic_string, string
 #include <vector>  // for vector
 #include "tests/cxx/badinc-d3.h"  // for D3_Enum
 #include "tests/cxx/badinc-i2-inl.h"  // for I2_Class::I2_Class, I2_Class::InlFileFn, I2_Class::InlFileStaticFn, I2_Class::InlFileTemplateFn, I2_Class::~I2_Class, I2_TemplateClass::I2_TemplateClass<FOO>, I2_TemplateClass::InlFileTemplateClassFn, I2_TemplateClass::~I2_TemplateClass<FOO>
