@@ -554,6 +554,16 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
     return true;
   }
 
+  bool VisitTypedefType(TypedefType* type) {
+    const auto* decl = dyn_cast<TypedefNameDecl>(type->getDecl());
+    if (const auto* template_spec =
+            dyn_cast<TemplateSpecializationType>(decl->getUnderlyingType())) {
+      for (const TemplateArgument& arg : template_spec->template_arguments())
+        TraverseTemplateArgument(arg);
+    }
+    return Base::VisitTypedefType(type);
+  }
+
  private:
   set<const Type*> seen_types_;
 };

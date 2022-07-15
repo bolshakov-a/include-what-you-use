@@ -133,6 +133,20 @@ vector<T> GetUniqueEntries(const vector<T>& v) {
   return retval;
 }
 
+// Removes all map items (i.e. key-value pairs) with values present
+// in the given set.
+template <typename T1, typename T2>
+map<T1, T2> GetWithoutValuesFromSet(map<T1, T2> a_map,
+                                    const set<T2>& to_remove) {
+  for (auto it = a_map.begin(), ite = a_map.end(); it != ite;) {
+    if (to_remove.count(it->second))
+      a_map.erase(it++);
+    else
+      ++it;
+  }
+  return a_map;
+}
+
 }  // namespace include_what_you_use
 
 #endif  // INCLUDE_WHAT_YOU_USE_IWYU_STL_UTIL_H_

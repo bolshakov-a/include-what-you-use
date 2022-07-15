@@ -2633,10 +2633,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     visitor_state_->processed_overload_locs.insert(loc);
   }
 
-  void ReportTemplateSpecTypeInternals(
-      const TemplateSpecializationType*,
-      const set<const Type*>& /*types_to_block*/) {
-  }
+  void ReportTemplateSpecTypeInternals(const TemplateSpecializationType*,
+                                       const set<const Type*>& types_to_block) =
+      delete;
 
   // Do not add any variables here!  If you do, they will not be shared
   // between the normal iwyu ast visitor and the
@@ -3192,6 +3191,14 @@ class InstantiatedTemplateVisitor
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     ReportTypeUse(caller_loc(), actual_type);
     return Base::VisitCXXConstructExpr(expr);
+  }
+
+  // --- Handler declared in IwyuBaseASTVisitor.
+
+  void ReportTemplateSpecTypeInternals(
+      const TemplateSpecializationType* type,
+      const set<const Type*>& /*types_to_block*/) {
+    TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
  private:
@@ -4018,7 +4025,8 @@ class IwyuAstConsumer
       node.SetParent(current_ast_node());
 
       instantiated_template_visitor_.ScanInstantiatedType(
-          &node, GetTplTypeResugarMapForClass(arg_type));
+          &node, GetResugarMapWithoutProvidedTypes(
+                     GetTplTypeResugarMapForClass(arg_type)));
     }
 
     return Base::VisitUnaryExprOrTypeTraitExpr(expr);
@@ -4097,8 +4105,8 @@ class IwyuAstConsumer
     // If we're not in a forward-declare context, use of a template
     // specialization requires having the full type information.
     if (!CanForwardDeclareType(current_ast_node())) {
-      const map<const Type*, const Type*> resugar_map
-          = GetTplTypeResugarMapForClass(type);
+      const map<const Type*, const Type*> resugar_map =
+          GetResugarMapWithoutProvidedTypes(GetTplTypeResugarMapForClass(type));
 
       instantiated_template_visitor_.ScanInstantiatedType(current_ast_node(),
                                                           resugar_map);
@@ -4157,8 +4165,8 @@ class IwyuAstConsumer
     }
 
     instantiated_template_visitor_.ScanInstantiatedFunction(
-        callee, parent_type,
-        current_ast_node(), resugar_map);
+        callee, parent_type, current_ast_node(),
+        GetResugarMapWithoutProvidedTypes(resugar_map));
     return true;
   }
 
@@ -4166,20 +4174,35 @@ class IwyuAstConsumer
 
   void ReportTemplateSpecTypeInternals(const TemplateSpecializationType* type,
                                        const set<const Type*>& types_to_block) {
-    map<const Type*, const Type*> resugar_map =
-        GetTplTypeResugarMapForClass(type);
-    for (auto it = resugar_map.begin(), ite = resugar_map.end(); it != ite;) {
-      if (types_to_block.count(it->second))
-        resugar_map.erase(it++);
-      else
-        ++it;
-    }
+    const map<const Type*, const Type*> resugar_map = GetWithoutValuesFromSet(
+        GetResugarMapWithoutProvidedTypes(GetTplTypeResugarMapForClass(type)),
+        types_to_block);
     ASTNode node(type);
     node.SetParent(current_ast_node());
     instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map);
   }
 
  private:
+  set<const Type*> GetTypesToRemoveFromResugarMap(
+      const map<const Type*, const Type*>& resugar_map) {
+    set<const Type*> result;
+    for (const auto& type_pair : resugar_map) {
+      if (const auto* typedef_type =
+              dyn_cast_or_null<TypedefType>(type_pair.second)) {
+        const set<const Type*> to_remove =
+            GetProvidedTypesForTypedef(typedef_type->getDecl());
+        result.insert(to_remove.begin(), to_remove.end());
+      }
+    }
+    return result;
+  }
+
+  map<const Type*, const Type*> GetResugarMapWithoutProvidedTypes(
+      map<const Type*, const Type*> resugar_map) {
+    return GetWithoutValuesFromSet(resugar_map,
+                                   GetTypesToRemoveFromResugarMap(resugar_map));
+  }
+
   // Class we call to handle instantiated template functions and classes.
   InstantiatedTemplateVisitor instantiated_template_visitor_;
 };  // class IwyuAstConsumer
