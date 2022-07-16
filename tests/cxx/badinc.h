@@ -287,7 +287,6 @@ typedef std::set<I2_Enum> H_I2Enum_Set;
 // re-exporting the vector<I2_Class> type, so it must be fully defined.
 // TODO(csilvers): IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 // IWYU: std::vector is...*<vector>
-// IWYU: I2_Class needs a declaration
 // IWYU: I2_Class is...*badinc-i2.h
 typedef std::vector<I2_Class> H_I2Class_Vector_Unused;
 // IWYU: I2_TemplateClass is...*badinc-i2.h
@@ -297,10 +296,12 @@ typedef std::vector<I2_Class> H_I2Class_Vector_Unused;
 // IWYU: I2_Enum is...*badinc-i2.h
 typedef I2_TemplateClass<I2_Enum> H_TemplateTypedef;
 
-// IWYU: I2_Struct needs a declaration
+// IWYU: I2_Struct is...*badinc-i2.h
 typedef I2_Struct* H_StructPtr;
 
-// IWYU: I2_Class needs a declaration
+// forward-declaration suggestion may be better here,
+// but the warning can easily be suppressed by means of fwd-declaring
+// IWYU: I2_Class is...*badinc-i2.h
 typedef int (*H_FunctionPtr)(int, I2_Class*);
 
 H_Enum H_Function(H_Class* c) {

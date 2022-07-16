@@ -194,8 +194,6 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 // definition even of I2_Class, since we don't know if clients will be
 // using the no-arg Cc_tpl_typedef ctor, which requires the full
 // definition of I2_Class.
-// IWYU: I1_Class needs a declaration
-// IWYU: I2_Class needs a declaration
 // IWYU: I1_TemplateClass is...*badinc-i1.h.*#included\.
 // IWYU: I1_TemplateClass is...*badinc-i1.h.*for autocast
 // IWYU: I1_Class is...*badinc-i1.h
@@ -212,7 +210,10 @@ Cc_tpl_typedef cc_tpl_typedef;
 // IWYU: I2_Class::InlFileTemplateFn is...*badinc-i2-inl.h
 // IWYU: I2_Class::InlFileStaticFn is...*badinc-i2-inl.h
 typedef I2_Class Cc_I2_Class_Typedef;
-// IWYU: I1_Struct needs a declaration
+// I1_Struct isn't really used by any possible operation with H_TemplateStruct,
+// but '#include' is required as a common rule, as long as I1_Struct
+// isn't forward-declared
+// IWYU: I1_Struct is...*badinc-i1.h
 // IWYU: OperateOn is...*badinc-i1.h
 typedef H_TemplateStruct<I1_Struct> Cc_H_TemplateStruct_I1Class_Typedef;
 

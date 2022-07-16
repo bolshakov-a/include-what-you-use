@@ -1735,17 +1735,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // VisitSubstTemplateTypeParmType.
   bool VisitTypedefNameDecl(clang::TypedefNameDecl* decl) {
     if (CanIgnoreCurrentASTNode())  return true;
-    const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
-    const Type* deref_type
-        = RemovePointersAndReferencesAsWritten(underlying_type);
-
-    if (CodeAuthorWantsJustAForwardDeclare(deref_type, GetLocation(decl)) ||
-        isa<SubstTemplateTypeParmType>(underlying_type)) {
-      current_ast_node()->set_in_forward_declare_context(true);
-    } else {
-      current_ast_node()->set_in_forward_declare_context(false);
-    }
-
+    current_ast_node()->set_in_forward_declare_context(true);
     return Base::VisitTypedefNameDecl(decl);
   }
 
@@ -2503,7 +2493,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const NamedDecl* decl = TypeToDeclAsWritten(type);
 
     // If we are forward-declarable, so are our template arguments.
-    if (CanForwardDeclareType(current_ast_node())) {
+    if (CanForwardDeclareType(current_ast_node()) && !IsProvidedComponent()) {
       ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
@@ -2623,6 +2613,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
  protected:
   const IwyuPreprocessorInfo& preprocessor_info() const {
     return visitor_state_->preprocessor_info;
+  }
+
+  bool IsProvidedComponent() {
+    const ASTNode* current_node = current_ast_node();
+    return current_node->HasAncestorOfType<TypedefNameDecl>() &&
+           !CodeAuthorWantsJustAForwardDeclare(current_node->GetAs<Type>(),
+                                               current_node->GetLocation());
   }
 
  private:
@@ -3922,6 +3919,15 @@ class IwyuAstConsumer
     return Base::VisitUsingDirectiveDecl(decl);
   }
 
+  bool AllTypesProvided(const Type* typedef_underlying_type) {
+    for (const Type* type : GetComponentsOfType(typedef_underlying_type)) {
+      if (CodeAuthorWantsJustAForwardDeclare(type,
+                                             current_ast_node()->GetLocation()))
+        return false;
+    }
+    return true;
+  }
+
   // If you say 'typedef Foo Bar', then clients can use Bar however
   // they want without having to worry about #including anything
   // except you.  That puts you on the hook for all the #includes that
@@ -3934,10 +3940,10 @@ class IwyuAstConsumer
   bool HandleAliasedClassMethods(TypedefNameDecl* decl) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    if (current_ast_node()->in_forward_declare_context())
-      return true;
 
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
+    if (!AllTypesProvided(underlying_type))
+      return true;
     const Decl* underlying_decl = TypeToDeclAsWritten(underlying_type);
 
     // We simulate a user calling all the methods in a class.
@@ -4051,7 +4057,7 @@ class IwyuAstConsumer
 
     // If we're forward-declarable, then no complicated checking is
     // needed: just forward-declare.
-    if (CanForwardDeclareType(current_ast_node())) {
+    if (CanForwardDeclareType(current_ast_node()) && !IsProvidedComponent()) {
       current_ast_node()->set_in_forward_declare_context(true);
       if (compiler()->getLangOpts().CPlusPlus) {
         // In C++, if we're already elaborated ('class Foo x') but not
