@@ -1416,8 +1416,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return underlying_type;
   }
 
-  set<const Type*> GetProvidedTypesForTypedef(const TypedefNameDecl* decl) {
+  set<const Type*> GetProvidedTypes(const Type* type, SourceLocation loc) {
     set<const Type*> retval;
+    for (const Type* component : GetComponentsOfType(type)) {
+      if (!isa<SubstTemplateTypeParmType>(component) &&
+          !CodeAuthorWantsJustAForwardDeclare(component, loc)) {
+        retval.insert(component);
+      }
+    }
+    return retval;
+  }
+
+  set<const Type*> GetProvidedTypesForTypedef(const TypedefNameDecl* decl) {
     const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
     // If the underlying type is itself a typedef, we recurse.
     if (const TypedefType* underlying_typedef = DynCastFrom(underlying_type)) {
@@ -1426,20 +1436,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
         // underlying type, do we want to return it here?
-        retval = GetProvidedTypesForTypedef(underlying_typedef_decl);
+        set<const Type*> retval =
+            GetProvidedTypesForTypedef(underlying_typedef_decl);
         // Alias types should always be provided.
         retval.insert(underlying_type);
         return retval;
       }
     }
 
-    for (const Type* type : GetComponentsOfType(underlying_type)) {
-      if (!isa<SubstTemplateTypeParmType>(type) &&
-          !CodeAuthorWantsJustAForwardDeclare(type, GetLocation(decl))) {
-        retval.insert(type);
-      }
-    }
-    return retval;
+    return GetProvidedTypes(underlying_type, GetLocation(decl));
   }
 
   // ast_node is the node for the autocast CastExpr.  We use it to get
@@ -1496,16 +1501,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return retval;
   }
 
-  set<const Type*> GetCallerResponsibleTypesForFnReturn(
-      const FunctionDecl* decl) {
-    set<const Type*> retval;
-    const Type* return_type
-        = RemoveElaboration(decl->getReturnType().getTypePtr());
-    if (CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl))) {
-      retval.insert(return_type);
-      // TODO(csilvers): include template type-args if appropriate.
-    }
-    return retval;
+  set<const Type*> GetProvidedTypesForFnReturn(const FunctionDecl* decl) {
+    const Type* return_type = decl->getReturnType().getTypePtr();
+    return GetProvidedTypes(return_type, GetLocation(decl));
   }
 
   //------------------------------------------------------------
@@ -2454,17 +2452,6 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     ReportDeclUse(CurrentLoc(), callee);
-
-    // Usually the function-author is responsible for providing the
-    // full type information for the return type of the function, but
-    // in cases where it's not, we have to take responsibility.
-    // TODO(csilvers): check the fn argument types as well.
-    const Type* return_type = callee->getReturnType().getTypePtr();
-    if (ContainsKey(GetCallerResponsibleTypesForFnReturn(callee),
-                    return_type)) {
-      ReportTypeUse(CurrentLoc(), return_type);
-    }
-
     return true;
   }
 
@@ -4171,8 +4158,10 @@ class IwyuAstConsumer
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
-    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
+    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type)) {
+      HandleFnReturnOnCallSite(callee);
       return true;
+    }
 
     map<const Type*, const Type*> resugar_map
         = GetTplTypeResugarMapForFunction(callee, calling_expr);
@@ -4218,6 +4207,19 @@ class IwyuAstConsumer
       map<const Type*, const Type*> resugar_map) {
     return GetWithoutValuesFromSet(resugar_map,
                                    GetTypesToRemoveFromResugarMap(resugar_map));
+  }
+
+  void HandleFnReturnOnCallSite(const FunctionDecl* callee) {
+    // Usually the function-author is responsible for providing the
+    // full type information for the return type of the function, but
+    // in cases where it's not, we have to take responsibility.
+    // TODO(csilvers): check the fn argument types as well.
+    const Type* return_type = callee->getReturnType().getTypePtr();
+    if (!return_type->isPointerType() && !return_type->isReferenceType() &&
+        !return_type->isEnumeralType()) {
+      ReportTypeUse(CurrentLoc(), return_type, nullptr,
+                    GetProvidedTypesForFnReturn(callee));
+    }
   }
 
   // Class we call to handle instantiated template functions and classes.
