@@ -47,6 +47,16 @@
 #include "tests/cxx/iwyu_stricter_than_cpp-d2.h"
 #include "tests/cxx/iwyu_stricter_than_cpp-d3.h"
 
+template <typename T>
+void UsingFn() {
+  T t;
+}
+
+template <typename T>
+void NonUsingFn() {
+  T* t;
+}
+
 typedef DoesEverythingRight DoubleTypedef;
 
 // If the typedef in -typedefs.h requires the full type, then users of
@@ -89,6 +99,19 @@ void TestTypedefs() {
   TplAllNeededTypesProvided tantp;
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TplOnlyTemplateProvided totp;
+
+  //
+
+  // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+  UsingFn<TplOnlyArgumentTypeProvided>();
+  // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  UsingFn<TplAllForwardDeclared>();
+  UsingFn<TplAllNeededTypesProvided>();
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  UsingFn<TplOnlyTemplateProvided>();
+
+  NonUsingFn<TplAllForwardDeclared>();
 
   // Nested name testing
   IndirectStruct3ProvidingTypedef::IndirectClassProvidingTypedef pp;
@@ -141,6 +164,19 @@ void TestTypeAliases() {
   TplAllNeededTypesProvidedAl tantp;
   // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TplOnlyTemplateProvidedAl totp;
+
+  //
+
+  // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+  UsingFn<TplOnlyArgumentTypeProvidedAl>();
+  // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  UsingFn<TplAllForwardDeclaredAl>();
+  UsingFn<TplAllNeededTypesProvidedAl>();
+  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
+  UsingFn<TplOnlyTemplateProvidedAl>();
+
+  NonUsingFn<TplAllForwardDeclaredAl>();
 
   // Nested name testing
   IndirectStruct3ProvidingAl::IndirectClassProvidingAl pp;
