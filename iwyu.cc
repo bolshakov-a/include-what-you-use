@@ -1765,23 +1765,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (IsFriendDecl(decl))
       return true;
 
-    // ...except the return value.
-    const Type* return_type
-        = RemoveElaboration(decl->getReturnType().getTypePtr());
-    const bool is_responsible_for_return_type
-        = (!CanIgnoreType(return_type) &&
-           !IsPointerOrReferenceAsWritten(return_type) &&
-           !CodeAuthorWantsJustAForwardDeclare(return_type, GetLocation(decl)));
-    // Don't bother to report here, when the language agrees with us
-    // we need the full type; that will be reported elsewhere, so
-    // reporting here would be double-counting.
-    const bool type_use_reported_in_visit_function_type
-        = (!current_ast_node()->in_forward_declare_context() ||
-           !IsClassType(return_type));
-    if (is_responsible_for_return_type &&
-        !type_use_reported_in_visit_function_type) {
-      ReportTypeUse(GetLocation(decl), return_type, "(for fn return type)");
-    }
+    // ...except the return value (handled in CanBeProvidedComponent)
 
     // ...and non-explicit, one-arg ('autocast') constructor types.
     for (FunctionDecl::param_iterator param = decl->param_begin();
@@ -2491,12 +2475,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     const NamedDecl* decl = TypeToDeclAsWritten(type);
 
+    const char* comment = nullptr;
     // If we are forward-declarable, so are our template arguments.
-    if (CanForwardDeclareType(current_ast_node()) && !IsProvidedComponent()) {
+    if (CanForwardDeclareType(current_ast_node()) &&
+        !IsProvidedComponent(&comment)) {
       ReportDeclForwardDeclareUse(CurrentLoc(), decl);
       current_ast_node()->set_in_forward_declare_context(true);
     } else {
-      ReportDeclUse(CurrentLoc(), decl);
+      ReportDeclUse(CurrentLoc(), decl, comment);
     }
 
     return true;
@@ -2614,9 +2600,26 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return visitor_state_->preprocessor_info;
   }
 
-  bool IsProvidedComponent() {
+  bool CanBeProvidedComponent(const ASTNode* node, const char** comment) const {
+    if (node->HasAncestorOfType<TypedefNameDecl>())
+      return true;
+
+    if (const FunctionDecl* decl = node->GetAncestorAs<FunctionDecl>()) {
+      if (IsFriendDecl(decl))
+        return false;
+      const Type* return_type = decl->getReturnType().getTypePtr();
+      if (node->StackContainsContent(return_type)) {
+        *comment = "(for fn return type)";
+        return !decl->isThisDeclarationADefinition() &&
+               !IsPointerOrReferenceAsWritten(return_type);
+      }
+    }
+    return false;
+  }
+
+  bool IsProvidedComponent(const char** comment) {
     const ASTNode* current_node = current_ast_node();
-    return current_node->HasAncestorOfType<TypedefNameDecl>() &&
+    return CanBeProvidedComponent(current_node, comment) &&
            !CodeAuthorWantsJustAForwardDeclare(current_node->GetAs<Type>(),
                                                current_node->GetLocation());
   }
@@ -4067,9 +4070,11 @@ class IwyuAstConsumer
   bool VisitTagType(clang::TagType* type) {
     if (CanIgnoreCurrentASTNode())  return true;
 
+    const char* comment = nullptr;
     // If we're forward-declarable, then no complicated checking is
     // needed: just forward-declare.
-    if (CanForwardDeclareType(current_ast_node()) && !IsProvidedComponent()) {
+    if (CanForwardDeclareType(current_ast_node()) &&
+        !IsProvidedComponent(&comment)) {
       current_ast_node()->set_in_forward_declare_context(true);
       if (compiler()->getLangOpts().CPlusPlus) {
         // In C++, if we're already elaborated ('class Foo x') but not
@@ -4096,7 +4101,7 @@ class IwyuAstConsumer
     }
 
     // OK, seems to be a use that requires the full type.
-    ReportDeclUse(CurrentLoc(), type->getDecl());
+    ReportDeclUse(CurrentLoc(), type->getDecl(), comment);
     return Base::VisitTagType(type);
   }
 
