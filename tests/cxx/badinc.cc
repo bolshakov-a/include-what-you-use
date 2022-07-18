@@ -1766,9 +1766,6 @@ int main() {
   h_templateclass2.static_inline(I22);
   // IWYU: I2_Enum is...*badinc-i2.h
   h_templateclass2.h_nested_struct.tplnested(I22);
-  // TODO: I1_Enum should be reported here as a full use but isn't,
-  // because we are not properly handling the dependent type FOO in
-  // the nested struct.
   // IWYU: I2_Enum is...*badinc-i2.h
   h_templateclass2.h_nested_struct.static_tplnested(I22);
   // This should not cause warnings for the i2_class destructor
