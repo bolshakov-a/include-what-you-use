@@ -1729,52 +1729,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           ReportDeclUse(CurrentLoc(), redecl);
       }
     } else {
-      // Make all our types forward-declarable...
+      // Make all our types forward-declarable.
       current_ast_node()->set_in_forward_declare_context(true);
-    }
-
-    // (The exceptions below don't apply to friend declarations; we
-    // never need full types for them.)
-    if (IsFriendDecl(decl))
-      return true;
-
-    // ...except the return value (handled in CanBeProvidedComponent)
-
-    // ...and non-explicit, one-arg ('autocast') constructor types.
-    for (FunctionDecl::param_iterator param = decl->param_begin();
-         param != decl->param_end(); ++param) {
-      const Type* param_type = GetTypeOf(*param);
-      if (!HasImplicitConversionConstructor(param_type))
-        continue;
-      const Type* deref_param_type =
-          RemovePointersAndReferencesAsWritten(param_type);
-      if (CanIgnoreType(param_type) && CanIgnoreType(deref_param_type))
-        continue;
-
-      // TODO(csilvers): remove this 'if' check when we've resolved the
-      // clang bug where getTypeSourceInfo() can return nullptr.
-      if ((*param)->getTypeSourceInfo()) {
-        const TypeLoc param_tl = (*param)->getTypeSourceInfo()->getTypeLoc();
-        // While iwyu requires the full type of autocast parameters,
-        // c++ does not.  Function-writers can force iwyu to follow
-        // the language by explicitly forward-declaring the type.
-        // Check for that now, and don't require the full type.
-        if (CodeAuthorWantsJustAForwardDeclare(deref_param_type,
-                                               GetLocation(&param_tl)))
-          continue;
-        // This is a 'full type required' check, to 'turn off' fwd decl.
-        // But don't bother to report in situations where we need the
-        // full type for other reasons; that's just double-reporting.
-        if (current_ast_node()->in_forward_declare_context() ||
-            IsPointerOrReferenceAsWritten(param_type)) {
-          ReportTypeUse(GetLocation(&param_tl), deref_param_type,
-                        "(for autocast)");
-        }
-      } else {
-        VERRS(6) << "WARNING: nullptr TypeSourceInfo for "
-                 << PrintableDecl(*param)
-                 << " (type " << PrintableType(param_type) << ")\n";
-      }
     }
     return true;
   }
@@ -2580,6 +2536,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (const FunctionDecl* decl = node->GetAncestorAs<FunctionDecl>()) {
       if (IsFriendDecl(decl))
         return false;
+      for (auto paramIt = decl->param_begin(); paramIt != decl->param_end();
+           ++paramIt) {
+        if (node->StackContainsContent(*paramIt)) {
+          *comment = "(for autocast)";
+          return HasImplicitConversionConstructor(GetTypeOf(*paramIt));
+        }
+      }
       const Type* return_type = decl->getReturnType().getTypePtr();
       if (node->StackContainsContent(return_type)) {
         *comment = "(for fn return type)";

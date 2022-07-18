@@ -13,11 +13,9 @@
 // reference to it.  This is because the class has an implicit
 // constructor.
 
-// IWYU: IndirectWithImplicitCtor needs a declaration
 // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
 int ImplicitCtorFn(IndirectWithImplicitCtor);
 
-// IWYU: IndirectWithImplicitCtor needs a declaration
 // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h.*for autocast
 int ImplicitCtorRefFn(const IndirectWithImplicitCtor&);
 
