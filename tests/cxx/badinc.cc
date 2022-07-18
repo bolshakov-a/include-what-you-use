@@ -401,7 +401,6 @@ class I1_DefinedInCc_Class {
 // arguments.  But we do for the return type unless we explicitly
 // say we don't want to (by providing a forward-declare).
 // IWYU: I1_Class is...*badinc-i1.h.*for fn return type
-// IWYU: I1_Class needs a declaration
 // IWYU: I2_Struct needs a declaration
 I1_Class Cc_DeclareOnlyFn(I2_Struct i2_class);
 

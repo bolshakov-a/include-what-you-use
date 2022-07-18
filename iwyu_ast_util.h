@@ -202,6 +202,17 @@ class ASTNode {
     return false;
   }
 
+  template <typename To>
+  const To* GetAncestorAs() const {
+    // DynCast needs a dummy argument of type To* to help its resolution.
+    const To* dummy = nullptr;
+    for (const ASTNode* node = this; node != nullptr; node = node->parent_) {
+      if (const auto result = node->DynCast<To>(dummy))
+        return result;
+    }
+    return nullptr;
+  }
+
   template<typename To> const To* GetParentAs() const {
     return GetAncestorAs<To>(1);
   }
