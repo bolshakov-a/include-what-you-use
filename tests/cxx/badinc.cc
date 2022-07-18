@@ -195,7 +195,6 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 // using the no-arg Cc_tpl_typedef ctor, which requires the full
 // definition of I2_Class.
 // IWYU: I1_TemplateClass is...*badinc-i1.h.*#included\.
-// IWYU: I1_TemplateClass is...*badinc-i1.h.*for autocast
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
@@ -315,7 +314,6 @@ const I2_Class& Cc_Function(
     // IWYU: I1_Class needs a declaration
     const I1_Class& i1,
     // IWYU: I2_Class is...*badinc-i2.h.*for autocast
-    // IWYU: I2_Class needs a declaration
     const I2_Class& i2,
     // A subtle c++ point: forward-declaring is ok for i2b, because
     // you can't do implicit conversion to a non-const reference
