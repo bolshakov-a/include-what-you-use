@@ -30,6 +30,8 @@ class Type;
 
 namespace include_what_you_use {
 
+enum class UseKind;
+
 using std::map;
 using std::pair;
 using std::set;
@@ -54,6 +56,13 @@ using std::set;
 // args.  So we store this info in a cache, since it's very expensive
 // to compute.
 
+struct TypeUseInfo {
+  const clang::Type* type_;
+  UseKind use_kind_;
+};
+
+bool operator<(const TypeUseInfo& lhs, const TypeUseInfo& rhs);
+
 class FullUseCache {
  public:
   // The first part of the key is the decl or type that we're
@@ -62,12 +71,12 @@ class FullUseCache {
   typedef pair<const void*,
                map<const clang::Type*, const clang::Type*>> Key;
   // The value are the types and decls we reported.
-  typedef pair<const set<const clang::Type*>,
-               const set<const clang::NamedDecl*>> Value;
+  typedef pair<const set<TypeUseInfo>, const set<const clang::NamedDecl*>>
+      Value;
 
   void Insert(const void* decl_or_type,
               const map<const clang::Type*, const clang::Type*>& resugar_map,
-              const set<const clang::Type*>& reported_types,
+              const set<TypeUseInfo>& reported_types,
               const set<const clang::NamedDecl*>& reported_decls) {
     // TODO(csilvers): should in_forward_declare_context() be in Key too?
     cache_.insert(pair<Key,Value>(Key(decl_or_type, resugar_map),
@@ -84,7 +93,7 @@ class FullUseCache {
 
   // You must call Contains() before calling these, to make sure the
   // key is in the cache.
-  const set<const clang::Type*>& GetFullUseTypes(
+  const set<TypeUseInfo>& GetFullUseTypes(
       const void* key,
       const map<const clang::Type*, const clang::Type*>& resugar_map) const {
     const Value* value = FindInMap(&cache_, Key(key, resugar_map));
@@ -150,8 +159,8 @@ class CacheStoringScope {
 
   // These are what ReportDeclUse() and ReportTypeUse() call to
   // populate this cache entry.
-  void NoteReportedType(const clang::Type* type) {
-    reported_types_.insert(type);
+  void NoteReportedType(const clang::Type* type, UseKind use_kind) {
+    reported_types_.insert({type, use_kind});
   }
   void NoteReportedDecl(const clang::NamedDecl* decl) {
     reported_decls_.insert(decl);
@@ -162,7 +171,7 @@ class CacheStoringScope {
   FullUseCache* const cache_;
   const void* const key_;
   const map<const clang::Type*, const clang::Type*>& resugar_map_;
-  set<const clang::Type*> reported_types_;
+  set<TypeUseInfo> reported_types_;
   set<const clang::NamedDecl*> reported_decls_;
 };
 

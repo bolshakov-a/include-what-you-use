@@ -29,6 +29,11 @@ using std::string;
 
 namespace include_what_you_use {
 
+bool operator<(const TypeUseInfo& lhs, const TypeUseInfo& rhs) {
+  return std::make_pair(lhs.type_, lhs.use_kind_) <
+         std::make_pair(rhs.type_, rhs.use_kind_);
+}
+
 // These are types that all have the same property: instantiating
 // the type requires full use of all explicitly-listed template
 // arguments, and full use of all default templated arguments that
