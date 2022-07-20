@@ -226,6 +226,7 @@ using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::errs;
 using llvm::isa;
+using llvm::isa_and_nonnull;
 using std::make_pair;
 using std::map;
 using std::set;
@@ -2529,6 +2530,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Now there are two options: either we have a type or we have a declaration
     // involving a type.
     const Type* parent_type = ast_node->GetParentAs<Type>();
+    if (isa_and_nonnull<SubstTemplateTypeParmType>(parent_type))
+      parent_type = ast_node->GetAncestorAs<Type>(2);
+
     if (parent_type == nullptr) {
       // Since it's not a type, it must be a decl.
       // Our target here is record members, all of which derive from ValueDecl.

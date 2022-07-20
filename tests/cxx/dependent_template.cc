@@ -27,6 +27,15 @@ void Fn() {
   TemplateFn<char>();
 }
 
+// TODO(bolshakov): move into more appropriate test case.
+template <typename T>
+class TemplateWithFwdDeclUse {
+  T* t;
+};
+
+// IWYU: Template needs a declaration
+TemplateWithFwdDeclUse<Template<int>> c;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/dependent_template.cc should add these lines:
