@@ -1573,6 +1573,29 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       ReportDeclUse(used_loc, decl);
   }
 
+  void ReportAliasDeclUse(SourceLocation used_loc, const TypedefNameDecl* decl,
+                          const Type* underlying_type, UseKind use_kind) {
+    const set<const Type*>& provided_types = GetProvidedTypesForTypedef(decl);
+    VERRS(6) << "User, not author, of typedef "
+             << decl->getQualifiedNameAsString()
+             << " owns the underlying type:\n";
+    // If any of the used types are themselves typedefs, this will
+    // result in a recursive expansion.  Note we are careful to
+    // recurse inside this class, and not go back to subclasses.
+    // But it seems to be correct to get to a subclass when the type
+    // is changed (dereferenced).
+    if (IsPointerOrReferenceAsWritten(underlying_type)) {
+      if (use_kind == UseKind::Deref) {
+        ReportTypeUse(used_loc,
+                      RemovePointersAndReferencesAsWritten(underlying_type),
+                      UseKind::Direct, provided_types);
+      }
+    } else {
+      IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, underlying_type,
+                                                 use_kind, provided_types);
+    }
+  }
+
   // Called when the given type is fully used at used_loc, regardless
   // of the type being explicitly written in the source code or not.
   // The comment, if not nullptr, is extra text that is included along
@@ -1611,29 +1634,18 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       // user -- the other typedef -- is never responsible for the
       // underlying type.  Instead, users of that typedef are.
       if (!current_ast_node()->template ParentIsA<TypedefNameDecl>()) {
-        const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
-        const set<const Type*>& provided_types =
-            GetProvidedTypesForTypedef(typedef_decl);
-        VERRS(6) << "User, not author, of typedef "
-                 << typedef_decl->getQualifiedNameAsString()
-                 << " owns the underlying type:\n";
-        const Type* underlying_type =
-            typedef_decl->getUnderlyingType().getTypePtr();
-        // If any of the used types are themselves typedefs, this will
-        // result in a recursive expansion.  Note we are careful to
-        // recurse inside this class, and not go back to subclasses.
-        // But it seems to be correct to get to a subclass when the type
-        // is changed (dereferenced).
-        if (IsPointerOrReferenceAsWritten(underlying_type)) {
-          if (use_kind == UseKind::Deref) {
-            ReportTypeUse(used_loc,
-                          RemovePointersAndReferencesAsWritten(underlying_type),
-                          UseKind::Direct, provided_types);
-          }
-        } else {
-          IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, underlying_type,
-                                                     use_kind, provided_types);
-        }
+        const TypedefNameDecl* decl = typedef_type->getDecl();
+        ReportAliasDeclUse(used_loc, decl,
+                           decl->getUnderlyingType().getTypePtr(), use_kind);
+      }
+    } else if (const auto* template_spec_type =
+                   dyn_cast<TemplateSpecializationType>(type)) {
+      if (template_spec_type->isTypeAlias()) {
+        const auto* decl = dyn_cast<clang::TypeAliasTemplateDecl>(
+            TypeToDeclAsWritten(template_spec_type));
+        ReportAliasDeclUse(used_loc, decl->getTemplatedDecl(),
+                           template_spec_type->getAliasedType().getTypePtr(),
+                           use_kind);
       }
     }
 
@@ -4142,6 +4154,14 @@ class IwyuAstConsumer
 
       instantiated_template_visitor_.ScanInstantiatedType(current_ast_node(),
                                                           resugar_map);
+    }
+
+    if (type->isTypeAlias()) {
+      if (CanForwardDeclareType(current_ast_node())) {
+        ReportDeclForwardDeclareUse(CurrentLoc(), TypeToDeclAsWritten(type));
+      } else {
+        ReportTypeUse(CurrentLoc(), type, UseKind::Direct);
+      }
     }
 
     return Base::VisitTemplateSpecializationType(type);
