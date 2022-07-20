@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// IWYU_ARGS: -I .
+// IWYU_ARGS: -I . -Xiwyu --check_also=tests/cxx/dependent_template-d1.h
 
 // Test dependent template specialization handling.
 
 #include "tests/cxx/dependent_template-d1.h"
+#include "tests/cxx/dependent_template-d2.h"
 
 template <typename T>
 void TemplateFn() {
@@ -27,6 +28,13 @@ void Fn() {
   TemplateFn<char>();
 }
 
+// IWYU: NonProvided is...*dependent_template-i3.h
+TemplateWithTypedefs<float>::TypeFromNonProvidedTemplate i2;
+// Despite it isn't directly used here, NonProvided type info is still needed to
+// fully instantiate TemplateWithTypedefs.
+// IWYU: NonProvided is...*dependent_template-i3.h
+TemplateWithTypedefs<float>::TypeFromProvidedTemplate i1;
+
 // TODO(bolshakov): move into more appropriate test case.
 template <typename T>
 class TemplateWithFwdDeclUse {
@@ -41,12 +49,15 @@ TemplateWithFwdDeclUse<Template<int>> c;
 tests/cxx/dependent_template.cc should add these lines:
 #include "tests/cxx/dependent_template-i1.h"
 #include "tests/cxx/dependent_template-i2.h"
+#include "tests/cxx/dependent_template-i3.h"
 
 tests/cxx/dependent_template.cc should remove these lines:
-- #include "tests/cxx/dependent_template-d1.h"  // lines XX-XX
+- #include "tests/cxx/dependent_template-d2.h"  // lines XX-XX
 
 The full include-list for tests/cxx/dependent_template.cc:
+#include "tests/cxx/dependent_template-d1.h"  // for TemplateWithTypedefs
 #include "tests/cxx/dependent_template-i1.h"  // for Template
 #include "tests/cxx/dependent_template-i2.h"  // for Template
+#include "tests/cxx/dependent_template-i3.h"  // for NonProvided
 
 ***** IWYU_SUMMARY */

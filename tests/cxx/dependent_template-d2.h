@@ -1,4 +1,4 @@
-//===--- dependent_template-i1.h - test input file for iwyu ---------------===//
+//===--- dependent_template-d2.h - test input file for iwyu ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-template <typename>
-struct Template {};
-
-template <typename>
-struct Provided {
-  typedef int Type;
-};
+#include "tests/cxx/dependent_template-i3.h"
