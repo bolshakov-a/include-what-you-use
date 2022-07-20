@@ -3127,8 +3127,13 @@ class InstantiatedTemplateVisitor
 
     // Report previous explicit instantiations here, only if the type is needed
     // fully.
-    if (!CanForwardDeclareType(current_ast_node()))
+    if (!CanForwardDeclareType(current_ast_node())) {
       ReportExplicitInstantiations(type);
+      if (!CanIgnoreType(type, IgnoreKind::ForExpansion) &&
+          caller_ast_node_->GetAs<Type>() != type) {
+        ReportDeclUse(caller_loc(), TypeToDeclAsWritten(type));
+      }
+    }
 
     return Base::VisitTemplateSpecializationType(type);
   }
