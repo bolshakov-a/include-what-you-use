@@ -38,6 +38,10 @@ int d = ImplicitCtorRefFn(IndirectWithImplicitCtor(4));
 IndirectWithImplicitCtor indirect
     // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h
     = 1;
+// IWYU: IndirectWithImplicitCtor needs a declaration
+const IndirectWithImplicitCtor& indirect_ref
+    // IWYU: IndirectWithImplicitCtor is...*implicit_ctor-i2.h
+    = 1;
 
 
 /**** IWYU_SUMMARY
