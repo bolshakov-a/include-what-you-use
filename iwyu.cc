@@ -182,6 +182,7 @@ using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
 using clang::FunctionType;
+using clang::InitListExpr;
 using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
 using clang::MemberExpr;
@@ -2393,6 +2394,15 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         ReportDeclUse(CurrentLoc(), enum_constant_decl);
     }
     return Base::VisitDeclRefExpr(expr);
+  }
+
+  bool VisitInitListExpr(InitListExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    const Type* type = GetTypeOf(expr);
+    if (!CanIgnoreType(type))
+      ReportTypeUse(CurrentLoc(), type, UseKind::Direct);
+    return Base::VisitInitListExpr(expr);
   }
 
   // When we call (or potentially call) a function, do an IWYU check
