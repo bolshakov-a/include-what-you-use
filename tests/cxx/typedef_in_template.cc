@@ -100,6 +100,15 @@ struct NestedUseOfAliasedParameter {
 // IWYU: IndirectClass needs a declaration
 NestedUseOfAliasedParameter<IndirectClass> c;
 
+template <typename T>
+struct DoubleTemplateInAlias {
+  typedef UsesAliasedParameter<UsesAliasedParameter<T>> Type;
+};
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+DoubleTemplateInAlias<IndirectClass>::Type d;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/typedef_in_template.cc should add these lines:

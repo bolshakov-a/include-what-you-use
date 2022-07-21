@@ -679,6 +679,9 @@ const clang::Type* GetCanonicalType(const clang::Type* type);
 // vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
 set<const clang::Type*> GetComponentsOfType(const clang::Type* type);
 
+set<const clang::Type*> GetComponentsOfTypeWithoutSubstituted(
+    const clang::Type* type);
+
 // The ElaborationType -- which says whether a type is preceded by
 // 'class' or 'struct' ('class Foo'), or whether the type-name has a
 // namespace ('ns::Foo') -- often pops where it's not wanted.  This

@@ -528,9 +528,10 @@ static const Type* GetTemplateArgAsType(const TemplateArgument& tpl_arg) {
 // int(const MyClass&), int, const MyClass&, MyClass).  Note that
 // this function only returns types-as-written, so it does *not* return
 // alloc<int(*)(const MyClass&)>, even though it's part of vector.
-class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
+template <typename Derived>
+class BaseTypeEnumerator : public RecursiveASTVisitor<Derived> {
  public:
-  typedef RecursiveASTVisitor<TypeEnumerator> Base;
+  typedef RecursiveASTVisitor<Derived> Base;
 
   // --- Public interface
   // We can add more entry points as needed.
@@ -538,13 +539,13 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
     seen_types_.clear();
     if (!type)
       return seen_types_;
-    TraverseType(QualType(type, 0));
+    this->getDerived().TraverseType(QualType(type, 0));
     return seen_types_;
   }
 
   set<const Type*> Enumerate(const TemplateArgument& tpl_arg) {
     seen_types_.clear();
-    TraverseTemplateArgument(tpl_arg);
+    this->getDerived().TraverseTemplateArgument(tpl_arg);
     return seen_types_;
   }
 
@@ -559,7 +560,7 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
     if (const auto* template_spec =
             dyn_cast<TemplateSpecializationType>(decl->getUnderlyingType())) {
       for (const TemplateArgument& arg : template_spec->template_arguments())
-        TraverseTemplateArgument(arg);
+        this->getDerived().TraverseTemplateArgument(arg);
     }
     return Base::VisitTypedefType(type);
   }
@@ -568,12 +569,26 @@ class TypeEnumerator : public RecursiveASTVisitor<TypeEnumerator> {
   set<const Type*> seen_types_;
 };
 
+class TypeEnumerator final : public BaseTypeEnumerator<TypeEnumerator> {};
+
+class TypeEnumeratorExcludingSubstituted final
+    : public BaseTypeEnumerator<TypeEnumeratorExcludingSubstituted> {
+ public:
+  bool TraverseSubstTemplateTypeParmType(SubstTemplateTypeParmType*) {
+    return true;
+  }
+};
+
 // A 'component' of a type is a type beneath it in the AST tree.
 // So 'Foo*' has component 'Foo', as does 'vector<Foo>', while
 // vector<pair<Foo, Bar>> has components pair<Foo,Bar>, Foo, and Bar.
 set<const Type*> GetComponentsOfType(const Type* type) {
   TypeEnumerator type_enumerator;
   return type_enumerator.Enumerate(type);
+}
+
+set<const Type*> GetComponentsOfTypeWithoutSubstituted(const Type* type) {
+  return TypeEnumeratorExcludingSubstituted{}.Enumerate(type);
 }
 
 // --- Utilities for Decl.
