@@ -2217,21 +2217,25 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     const CXXConstructorDecl* decl = expr->getConstructor();
     ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(), decl);
 
-    // 'Autocast' -- calling a one-arg, non-explicit constructor
-    // -- is a special case when it's done for a function call.
-    // iwyu requires the function-writer to provide the #include
-    // for the casted-to type, just so we don't have to require it
-    // here.  *However*, the function-author can override this
-    // iwyu requirement, in which case we're responsible for the
-    // casted-to type.  See IwyuBaseASTVisitor::VisitFunctionDecl.
     // Explicitly written CXXTemporaryObjectExpr are ignored here.
-    if (expr->getStmtClass() == Stmt::StmtClass::CXXConstructExprClass &&
-        !decl->isCopyOrMoveConstructor()) {
+    if (expr->getStmtClass() == Stmt::StmtClass::CXXConstructExprClass) {
       const Type* type = expr->getType().getTypePtr();
-      if (current_ast_node()->template HasAncestorOfType<CallExpr>() &&
-          !CanIgnoreType(type)) {
-        ReportTypeUse(CurrentLoc(), type, UseKind::Direct,
-                      GetProvidedTypesForAutocast(current_ast_node()));
+      if (!CanIgnoreType(type)) {
+        if (current_ast_node()->template HasAncestorOfType<CallExpr>()) {
+          // 'Autocast' -- calling a one-arg, non-explicit constructor
+          // -- is a special case when it's done for a function call.
+          // iwyu requires the function-writer to provide the #include
+          // for the casted-to type, just so we don't have to require it
+          // here.  *However*, the function-author can override this
+          // iwyu requirement, in which case we're responsible for the
+          // casted-to type.  See IwyuBaseASTVisitor::VisitFunctionDecl.
+          if (!decl->isCopyOrMoveConstructor()) {
+            ReportTypeUse(CurrentLoc(), type, UseKind::Direct,
+                          GetProvidedTypesForAutocast(current_ast_node()));
+          }
+        } else if (!IsCXXConstructExprInInitializer(current_ast_node())) {
+          ReportTypeUse(CurrentLoc(), type, UseKind::Direct);
+        }
       }
     }
 

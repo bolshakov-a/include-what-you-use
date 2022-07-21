@@ -729,6 +729,7 @@ I1_TemplateClass<I1_Class> i1_templateclass_object;
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 // IWYU: I1_Class needs a declaration
 // IWYU: I1_Class is...*badinc-i1.h
+// IWYU: I1_Union is...*badinc-i1.h
 I1_TemplateClass<std::vector<I1_Class> > i1_nested_templateclass(i1_union);
 // We need full type info for i1_templateclass because we never
 // fwd-declare a class with default template parameters.
@@ -765,6 +766,9 @@ I1_TemplateClass<std::vector<I1_Enum> >* i1_nested_templateclass_enum_ptr;
 // IWYU: std::vector is...*<vector>
 I1_TemplateClass<std::vector<I1_Enum>*> i1_nested_templateclass_enum_ptr2(NULL);
 // Note: we have to avoid the most vexing parse, here!
+// TODO(bolshakov): resugar constructed parameter of I1_TemplateClass
+// constructor to typedef type somehow.
+// IWYU: I1_Typedef_Class is...*badinc-i1.h
 // IWYU: I1_TemplateClass is...*badinc-i1.h
 I1_TemplateClass<D1_I1_Typedef> i1_tplclass_with_typedef((D1_I1_Typedef()));
 // IWYU: I1_TemplateClass is...*badinc-i1.h
@@ -1319,7 +1323,8 @@ int main() {
   I2_Class i2_class_from_struct = ctor_cast_struct;   // ctor takes a reference
   // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
-  I2_Class i2_class_from_union = ctor_cast_union;   // ctor takes a value
+  // IWYU: I2_Union is...*badinc-i2.h
+  I2_Class i2_class_from_union = ctor_cast_union;  // ctor takes a value
 
   // User-defined casts need the full from-type (to call its operator totype()).
   // IWYU: I2_Class is...*badinc-i2.h
@@ -1575,6 +1580,7 @@ int main() {
       // IWYU: I1_TemplateClass is...*badinc-i1.h
       // IWYU: I2_Class needs a declaration
       // IWYU: I2_Class is...*badinc-i2.h
+      // IWYU: I1_Union is...*badinc-i1.h
       = new I1_TemplateClass<I2_Class, I1_Struct>(i1_union);
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
@@ -1642,6 +1648,7 @@ int main() {
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
   // IWYU: I2_Class is...*badinc-i2.h
+  // IWYU: I1_Union is...*badinc-i1.h
   I1_TemplateClass<I2_Class, I1_Struct> local_i1_templateclass(i1_union);
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
   // IWYU: I1_Struct needs a declaration
@@ -1649,6 +1656,7 @@ int main() {
   // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
   // IWYU: I2_Class is...*badinc-i2.h
+  // IWYU: I1_Union is...*badinc-i1.h
   (void)I1_TemplateClass<I2_Class, I1_Struct>(i1_union);
 
   (void)(*(new int(4)));
@@ -1856,7 +1864,7 @@ The full include-list for tests/cxx/badinc.cc:
 #include <typeinfo>  // for type_info
 #include "tests/cxx/badinc-d1.h"  // for D1CopyClassFn, D1Function, D1_Class, D1_CopyClass, D1_Enum, D1_I1_Typedef, D1_StructPtr, D1_Subclass, D1_TemplateClass, D1_TemplateStructWithDefaultParam, MACRO_CALLING_I4_FUNCTION
 #include "tests/cxx/badinc-d4.h"  // for D4_ClassForOperator, operator<<
-#include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns2, i1_ns4, i1_ns5, kI1ConstInt, operator==
+#include "tests/cxx/badinc-i1.h"  // for EmptyDestructorClass, H_Class::H_Class_DefinedInI1, I1_And_I2_OverloadedFunction, I1_Base, I1_Class, I1_ClassPtr, I1_Enum, I1_Function, I1_FunctionPtr, I1_I2_Class_Typedef, I1_MACRO_LOGGING_CLASS, I1_MACRO_SYMBOL_WITHOUT_VALUE, I1_MACRO_SYMBOL_WITH_VALUE, I1_MACRO_SYMBOL_WITH_VALUE0, I1_MACRO_SYMBOL_WITH_VALUE2, I1_ManyPtrStruct (ptr only), I1_MemberPtr, I1_NamespaceClass, I1_NamespaceStruct, I1_NamespaceTemplateFn, I1_OverloadedFunction, I1_PtrAndUseOnSameLine, I1_PtrDereferenceClass, I1_PtrDereferenceStatic, I1_PtrDereferenceStruct, I1_SiblingClass, I1_StaticMethod, I1_Struct, I1_Subclass, I1_SubclassesI2Class, I1_TemplateClass, I1_TemplateClassFwdDeclaredInD2 (ptr only), I1_TemplateFunction, I1_TemplateMethodOnlyClass, I1_TemplateSubclass, I1_Typedef, I1_TypedefOnly_Class, I1_Typedef_Class, I1_Union, I1_UnnamedStruct, I1_UnusedNamespaceStruct (ptr only), I1_const_ptr, I2_OperatorDefinedInI1Class::operator<<, MACRO_CALLING_I6_FUNCTION, OperateOn, i1_GlobalFunction, i1_int, i1_int_global, i1_int_global2, i1_int_global2sub, i1_int_global3, i1_int_global3sub, i1_int_global4, i1_int_global4sub, i1_int_globalsub, i1_ns2, i1_ns4, i1_ns5, kI1ConstInt, operator==
 #include "tests/cxx/badinc2.c"
 class D2_Class;
 class D2_ForwardDeclareClass;
