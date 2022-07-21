@@ -214,6 +214,7 @@ using clang::FunctionDecl;
 using clang::FunctionProtoType;
 using clang::FunctionTemplateDecl;
 using clang::FunctionType;
+using clang::InitListExpr;
 using clang::LateParsedTemplate;
 using clang::LinkageSpecDecl;
 using clang::MemberExpr;
@@ -2323,6 +2324,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       else
         ReportDeclUse(CurrentLoc(), enum_constant_decl);
     }
+    return true;
+  }
+
+  bool VisitInitListExpr(InitListExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    const Type* type = GetTypeOf(expr);
+    ReportTypeUse(CurrentLoc(), type, DerefKind::None);
     return true;
   }
 
