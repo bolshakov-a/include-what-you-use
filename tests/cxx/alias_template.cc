@@ -20,6 +20,13 @@ using Identity = T;
 // IWYU: IndirectClass is...*indirect.h
 Identity<IndirectClass> ic;
 
+template <typename T>
+using UsingInternals = decltype(T::a);
+
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+UsingInternals<IndirectClass> i;
+
 template<class T> struct FullUseTemplateArgInSizeof {
   char argument[sizeof(T)];
 };

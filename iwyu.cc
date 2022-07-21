@@ -294,8 +294,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   // We need to create implicit ctor/dtor nodes, which requires
   // non-const methods on CompilerInstance, so the var can't be const.
   explicit BaseAstVisitor(CompilerInstance* compiler)
-      : compiler_(compiler),
-        current_ast_node_(nullptr) {}
+      : current_ast_node_(nullptr), compiler_(compiler) {
+  }
 
   virtual ~BaseAstVisitor() = default;
 
@@ -796,15 +796,15 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
  protected:
   CompilerInstance* compiler() { return compiler_; }
 
- private:
-  template <typename T> friend class BaseAstVisitor;
-  CompilerInstance* const compiler_;
-
   // The currently active decl/stmt/type/etc -- that is, the node
   // being currently visited in a Visit*() or Traverse*() method.  The
   // advantage of ASTNode over the object passed in to Visit*() and
   // Traverse*() is ASTNode knows its parent.
   ASTNode* current_ast_node_;
+
+ private:
+  template <typename T> friend class BaseAstVisitor;
+  CompilerInstance* const compiler_;
 };
 
 // ----------------------------------------------------------------------
@@ -3368,10 +3368,12 @@ class InstantiatedTemplateVisitor
     if (current_ast_node()->in_forward_declare_context())
       return true;
 
-    while (type->isTypeAlias()) {
-      type = DynCastFrom(type->getAliasedType().getTypePtr());
-      if (!type)
-        return true;
+    const NamedDecl* named_decl = TypeToDeclAsWritten(type);
+
+    if (type->isTypeAlias()) {
+      ASTNode node(named_decl);
+      CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+      return TraverseType(type->getAliasedType());
     }
 
     // If we're a dependent type, we only try to be analyzed if we're
@@ -3390,7 +3392,6 @@ class InstantiatedTemplateVisitor
       return true;
     }
 
-    const NamedDecl* named_decl = TypeToDeclAsWritten(type);
     const ClassTemplateSpecializationDecl* class_decl = DynCastFrom(named_decl);
 
     // Bail out if we are not a proper class
