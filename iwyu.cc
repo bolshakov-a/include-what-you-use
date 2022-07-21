@@ -1429,8 +1429,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return retval;
   }
 
-  set<const Type*> GetProvidedTypesForTypedef(const TypedefNameDecl* decl) {
-    const Type* underlying_type = decl->getUnderlyingType().getTypePtr();
+  set<const Type*> GetProvidedTypesForTypedef(const Type* underlying_type,
+                                              SourceLocation decl_loc) {
     // If the underlying type is itself a typedef, we recurse.
     if (const TypedefType* underlying_typedef = DynCastFrom(underlying_type)) {
       if (const TypedefNameDecl* underlying_typedef_decl
@@ -1438,15 +1438,16 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         // TODO(csilvers): if one of the intermediate typedefs
         // #includes the necessary definition of the 'final'
         // underlying type, do we want to return it here?
-        set<const Type*> retval =
-            GetProvidedTypesForTypedef(underlying_typedef_decl);
+        set<const Type*> retval = GetProvidedTypesForTypedef(
+            underlying_typedef_decl->getUnderlyingType().getTypePtr(),
+            GetLocation(underlying_typedef_decl));
         // Alias types should always be provided.
         retval.insert(underlying_type);
         return retval;
       }
     }
 
-    return GetProvidedTypes(underlying_type, GetLocation(decl));
+    return GetProvidedTypes(underlying_type, decl_loc);
   }
 
   // ast_node is the node for the autocast CastExpr.  We use it to get
@@ -1575,7 +1576,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   void ReportAliasDeclUse(SourceLocation used_loc, const TypedefNameDecl* decl,
                           const Type* underlying_type, UseKind use_kind) {
-    const set<const Type*>& provided_types = GetProvidedTypesForTypedef(decl);
+    const set<const Type*>& provided_types =
+        GetProvidedTypesForTypedef(underlying_type, GetLocation(decl));
     VERRS(6) << "User, not author, of typedef "
              << decl->getQualifiedNameAsString()
              << " owns the underlying type:\n";
@@ -2754,9 +2756,9 @@ class InstantiatedTemplateVisitor
     set_current_ast_node(caller_ast_node);
 
     const TypedefNameDecl* typedef_decl = alias_type->getDecl();
-    const set<const Type*>& provided_types =
-        GetProvidedTypesForTypedef(typedef_decl);
     const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
+    const set<const Type*>& provided_types =
+        GetProvidedTypesForTypedef(type, GetLocation(typedef_decl));
     ReportTypeUse(caller_loc(), type, UseKind::Direct, provided_types);
   }
 
@@ -3373,6 +3375,9 @@ class InstantiatedTemplateVisitor
     if (type->isTypeAlias()) {
       ASTNode node(named_decl);
       CurrentASTNodeUpdater canu(&current_ast_node_, &node);
+      // Fwd-decl context for traversing type alias internals, similar to
+      // VisitTypedefNameDecl.
+      node.set_in_forward_declare_context(true);
       return TraverseType(type->getAliasedType());
     }
 
@@ -4260,10 +4265,12 @@ class IwyuAstConsumer
     for (const auto& type_pair : resugar_map) {
       if (const auto* typedef_type =
               dyn_cast_or_null<TypedefType>(type_pair.second)) {
-        const set<const Type*> to_remove =
-            GetProvidedTypesForTypedef(typedef_type->getDecl());
+        const TypedefNameDecl* decl = typedef_type->getDecl();
+        const set<const Type*> to_remove = GetProvidedTypesForTypedef(
+            decl->getUnderlyingType().getTypePtr(), GetLocation(decl));
         result.insert(to_remove.begin(), to_remove.end());
       }
+      // TODO: handle alias templates
     }
     return result;
   }

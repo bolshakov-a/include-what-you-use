@@ -86,6 +86,13 @@ using IndirectStruct3NonProvidingAl = IndirectStruct3;
 struct IndirectStruct4;
 using IndirectStruct4NonProvidingAl = IndirectStruct4;
 
+// --- Alias templates.
+
+template <typename T>
+using TemplateProvidedArgumentUsed = TplDirectStruct3<T, IndirectStruct2>;
+
+template <typename T>
+using TemplateNotProvidedArgumentUsed = TplIndirectStruct3<T, IndirectStruct2>;
 
 /**** IWYU_SUMMARY
 

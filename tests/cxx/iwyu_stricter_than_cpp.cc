@@ -187,6 +187,15 @@ void TestTypeAliases() {
   // IWYU: IndirectStruct4 is...*iwyu_stricter_than_cpp-i4.h
   // IWYU: IndirectClass is...*indirect.h
   IndirectStruct4NonProvidingAl::IndirectClassNonProvidingAl nn;
+
+  // --- Alias templates.
+  // IWYU: IndirectStruct3 needs a declaration
+  // IWYU: IndirectStruct3 is...*iwyu_stricter_than_cpp-i3.h
+  TemplateProvidedArgumentUsed<IndirectStruct3> tpau;
+  // IWYU: IndirectStruct3 needs a declaration
+  // IWYU: IndirectStruct3 is...*iwyu_stricter_than_cpp-i3.h
+  // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
+  TemplateNotProvidedArgumentUsed<IndirectStruct3> tnpau;
 }
 
 void TestAutocast() {
@@ -315,7 +324,7 @@ The full include-list for tests/cxx/iwyu_stricter_than_cpp.cc:
 #include "tests/cxx/iwyu_stricter_than_cpp-i3.h"  // for IndirectStruct3
 #include "tests/cxx/iwyu_stricter_than_cpp-i4.h"  // for IndirectStruct4
 #include "tests/cxx/iwyu_stricter_than_cpp-i5.h"  // for TplIndirectStruct3
-#include "tests/cxx/iwyu_stricter_than_cpp-type_alias.h"  // for DoesEverythingRightAl, DoesNotForwardDeclareAl, DoesNotForwardDeclareAndIncludesAl, DoesNotForwardDeclareProperlyAl, IncludesAl, IndirectStruct3NonProvidingAl, IndirectStruct4NonProvidingAl, TplAllForwardDeclaredAl, TplAllNeededTypesProvidedAl, TplDoesEverythingRightAgainAl, TplDoesEverythingRightAl, TplDoesNotForwardDeclareAl, TplDoesNotForwardDeclareAndIncludesAl, TplDoesNotForwardDeclareProperlyAl, TplIncludesAl, TplOnlyArgumentTypeProvidedAl, TplOnlyTemplateProvidedAl
+#include "tests/cxx/iwyu_stricter_than_cpp-type_alias.h"  // for DoesEverythingRightAl, DoesNotForwardDeclareAl, DoesNotForwardDeclareAndIncludesAl, DoesNotForwardDeclareProperlyAl, IncludesAl, IndirectStruct3NonProvidingAl, IndirectStruct4NonProvidingAl, TemplateNotProvidedArgumentUsed, TemplateProvidedArgumentUsed, TplAllForwardDeclaredAl, TplAllNeededTypesProvidedAl, TplDoesEverythingRightAgainAl, TplDoesEverythingRightAl, TplDoesNotForwardDeclareAl, TplDoesNotForwardDeclareAndIncludesAl, TplDoesNotForwardDeclareProperlyAl, TplIncludesAl, TplOnlyArgumentTypeProvidedAl, TplOnlyTemplateProvidedAl
 #include "tests/cxx/iwyu_stricter_than_cpp-typedefs.h"  // for DoesEverythingRight, DoesNotForwardDeclare, DoesNotForwardDeclareAndIncludes, DoesNotForwardDeclareProperly, Includes, IndirectStruct3NonProvidingTypedef, IndirectStruct4NonProvidingTypedef, TplAllForwardDeclared, TplAllNeededTypesProvided, TplDoesEverythingRight, TplDoesEverythingRightAgain, TplDoesNotForwardDeclare, TplDoesNotForwardDeclareAndIncludes, TplDoesNotForwardDeclareProperly, TplIncludes, TplOnlyArgumentTypeProvided, TplOnlyTemplateProvided
 struct DirectStruct1;
 struct DirectStruct2;
