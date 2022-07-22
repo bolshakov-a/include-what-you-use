@@ -11,7 +11,14 @@
 #ifndef INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_IN_TEMPLATE_I2_H_
 #define INCLUDE_WHAT_YOU_USE_TESTS_CXX_TYPEDEF_IN_TEMPLATE_I2_H_
 
+class Class1;
+
 class Class2 {};
+
+class Class3 {
+ public:
+  using Internal = Class1;
+};
 
 template <class T, class U>
 struct Pair {

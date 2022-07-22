@@ -135,6 +135,16 @@ Identity<Identity<
     FwdDeclAliasedParameterUse<Pair<IndirectClass, IndirectClass>>>::Type>::Type
     f;
 
+template <typename T>
+struct NestedTypedef {
+  typedef typename T::Internal Typedef;
+};
+
+// IWYU: Class3 needs a declaration
+// IWYU: Class3 is...*typedef_in_template-i2.h
+// IWYU: Class1 is...*typedef_in_template-i1.h
+NestedTypedef<Class3>::Typedef g;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/typedef_in_template.cc should add these lines:
@@ -150,6 +160,6 @@ tests/cxx/typedef_in_template.cc should remove these lines:
 The full include-list for tests/cxx/typedef_in_template.cc:
 #include "tests/cxx/indirect.h"  // for IndirectClass
 #include "tests/cxx/typedef_in_template-i1.h"  // for Class1
-#include "tests/cxx/typedef_in_template-i2.h"  // for Class2, Pair
+#include "tests/cxx/typedef_in_template-i2.h"  // for Class2, Class3, Pair
 
 ***** IWYU_SUMMARY */
