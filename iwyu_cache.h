@@ -123,7 +123,7 @@ class FullUseCache {
   // available via GetFullUseType(), which does not have this problem
   // with sugaring.
   static map<const clang::Type*, const clang::Type*> GetPrecomputedResugarMap(
-      const clang::TemplateSpecializationType* tpl_type);
+      const clang::TemplateSpecializationType* tpl_type, bool cpp17_or_later);
 
  private:
   map<Key, Value> cache_;

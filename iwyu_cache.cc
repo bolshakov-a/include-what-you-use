@@ -46,13 +46,11 @@ static const char* const kFullUseTypes[] = {
   "__gnu_cxx::hash_multiset",
   "__gnu_cxx::hash_set",
   "std::deque",
-  "std::list",
   "std::map",
   "std::multimap",
   "std::multiset",
   "std::set",
   "std::slist",
-  "std::vector",
 };
 
 // If the passed-in tpl_decl is one of the classes we have hard-coded
@@ -64,11 +62,13 @@ static const char* const kFullUseTypes[] = {
 // 'myclass_vector.clear();'.  This is because the former never tries
 // to instantiate methods, making the hard-coding much easier.
 map<const Type*, const Type*> FullUseCache::GetPrecomputedResugarMap(
-    const TemplateSpecializationType* tpl_type) {
+    const TemplateSpecializationType* tpl_type, bool cpp17_or_later) {
   static const int fulluse_size = (sizeof(kFullUseTypes) /
                                    sizeof(*kFullUseTypes));
-  static const set<string> fulluse_types(kFullUseTypes,
+  set<string> fulluse_types(kFullUseTypes,
                                          kFullUseTypes + fulluse_size);
+  if (!cpp17_or_later)
+    fulluse_types.insert({"std::list", "std::vector"});
 
   const NamedDecl* tpl_decl = TypeToDeclAsWritten(tpl_type);
   if (!ContainsKey(fulluse_types, GetWrittenQualifiedNameAsString(tpl_decl)))
