@@ -1501,9 +1501,10 @@ int main() {
   // IWYU: std::vector is...*<vector>
   // IWYU: I2_Enum is...*badinc-i2.h
   for (std::vector<I2_Enum>::iterator it = local_enum_vector.begin();
+       // TODO(bolshakov): get rid of redundant enum reporting completely.
+       // IWYU: I2_Enum needs a declaration
        // IWYU: std::vector is...*<vector>
        it != local_enum_vector.end(); ++it) {
-    // IWYU: I2_Enum is...*badinc-i2.h
     // IWYU: std::vector is...*<vector>
     std::find(local_enum_vector.begin(), local_enum_vector.end(), *it);
   }

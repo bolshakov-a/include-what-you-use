@@ -1579,6 +1579,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (!type)
       return;
 
+    type = RemoveSubstTemplateTypeParm(type);
+
     if (isa<EnumType>(type))
       return;
 
@@ -2634,6 +2636,9 @@ class InstantiatedTemplateVisitor
   //
   // ScanInstantiatedType() is similar, except that it looks through
   // the definition of a class template instead of a statement.
+  //
+  // HandleAliasInInstantiatedTemplate() is for reporting nested template
+  // typedef with respect to given template arguments as written.
 
   // resugar_map is a map from an unsugared (canonicalized) template
   // type to the template type as written (or as close as we can find
@@ -2690,6 +2695,23 @@ class InstantiatedTemplateVisitor
 
     TraverseTemplateSpecializationType(
         const_cast<TemplateSpecializationType*>(type));
+  }
+
+  void HandleAliasInInstantiatedTemplate(
+      const TypedefType* alias_type, ASTNode* caller_ast_node,
+      const map<const Type*, const Type*>& resugar_map) {
+    Clear();
+    caller_ast_node_ = caller_ast_node;
+    resugar_map_ = resugar_map;
+
+    set_current_ast_node(caller_ast_node);
+
+    const TypedefNameDecl* typedef_decl = alias_type->getDecl();
+    const set<const Type*>& provided_types =
+        GetProvidedTypesForTypedef(typedef_decl);
+    const Type* type = RemovePointersAndReferencesAsWritten(
+        typedef_decl->getUnderlyingType().getTypePtr());
+    ReportTypeUse(caller_loc(), type, provided_types);
   }
 
   //------------------------------------------------------------
@@ -3979,6 +4001,17 @@ class IwyuAstConsumer
     if (CanForwardDeclareType(current_ast_node())) {
       ReportDeclForwardDeclareUse(CurrentLoc(), type->getDecl());
     } else {
+      if (const clang::ElaboratedType* elaborated_type =
+              DynCastFrom(current_ast_node()->GetParentAs<Type>())) {
+        NestedNameSpecifier* nns = elaborated_type->getQualifier();
+        CHECK_(nns);
+        if (const TemplateSpecializationType* tmpl_type =
+                DynCastFrom(nns->getAsType())) {
+          instantiated_template_visitor_.HandleAliasInInstantiatedTemplate(
+              type, current_ast_node(),
+              GetTplTypeResugarMapForClass(tmpl_type));
+        }
+      }
       ReportTypeUse(CurrentLoc(), type);
     }
     return Base::VisitTypedefType(type);
