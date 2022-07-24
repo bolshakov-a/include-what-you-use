@@ -94,6 +94,13 @@ using TemplateProvidedArgumentUsed = TplDirectStruct3<T, IndirectStruct2>;
 template <typename T>
 using TemplateNotProvidedArgumentUsed = TplIndirectStruct3<T, IndirectStruct2>;
 
+template <typename T>
+using TemplateProvidedArgumentNotUsed = TplDirectStruct3<IndirectStruct2, T>;
+
+template <typename T>
+using TemplateNotProvidedArgumentNotUsed =
+    TplIndirectStruct3<IndirectStruct2, T>;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/iwyu_stricter_than_cpp-type_alias.h should add these lines:
