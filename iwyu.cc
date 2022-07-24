@@ -1826,7 +1826,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode()) return true;
 
     if (const Type* type = stmt->getRangeInit()->getType().getTypePtrOrNull()) {
-      ReportTypeUse(CurrentLoc(), type, UseKind::Deref);
+      if (!CanIgnoreType(type))
+        ReportTypeUse(CurrentLoc(), type, UseKind::Deref);
 
       // TODO: We should probably find a way to require inclusion of any
       // argument-dependent begin/end declarations.
