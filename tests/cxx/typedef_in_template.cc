@@ -109,6 +109,32 @@ struct DoubleTemplateInAlias {
 // IWYU: IndirectClass is...*indirect.h
 DoubleTemplateInAlias<IndirectClass>::Type d;
 
+template <typename T>
+struct Identity
+{
+  typedef T Type;
+};
+
+Identity<Identity<
+    // IWYU: IndirectClass needs a declaration
+    // IWYU: IndirectClass is...*indirect.h
+    // IWYU: Pair needs a declaration
+    // IWYU: Pair is...*typedef_in_template-i2.h
+    UsesAliasedParameter<Pair<IndirectClass, IndirectClass>>>::Type>::Type e;
+
+
+template <typename T>
+struct FwdDeclAliasedParameterUse {
+  using TAlias = T;
+  TAlias* t;
+};
+
+Identity<Identity<
+    // IWYU: IndirectClass needs a declaration
+    // IWYU: Pair needs a declaration
+    FwdDeclAliasedParameterUse<Pair<IndirectClass, IndirectClass>>>::Type>::Type
+    f;
+
 /**** IWYU_SUMMARY
 
 tests/cxx/typedef_in_template.cc should add these lines:

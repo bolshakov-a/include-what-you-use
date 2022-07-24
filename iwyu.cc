@@ -170,6 +170,7 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeducedTemplateSpecializationType;
+using clang::ElaboratedType;
 using clang::EnumConstantDecl;
 using clang::EnumDecl;
 using clang::EnumType;
@@ -1581,6 +1582,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     type = RemoveSubstTemplateTypeParm(type);
 
+    if (const auto* elaborated_type = dyn_cast<ElaboratedType>(type)) {
+      return this->getDerived().ReportElaboratedTypeUse(
+          used_loc, elaborated_type, types_to_block);
+    }
+
     if (isa<EnumType>(type))
       return;
 
@@ -1624,11 +1630,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                                                  decl);
       }
     } else {
-      if (const auto* template_spec_type =
-              dyn_cast<TemplateSpecializationType>(type)) {
-        this->getDerived().ReportTemplateSpecTypeInternals(template_spec_type,
-                                                           types_to_block);
-      }
+      this->getDerived().ReportTemplateSpecTypeInternals(type, types_to_block);
       if (types_to_block.count(type))
         return;
       if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
@@ -2570,9 +2572,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     visitor_state_->processed_overload_locs.insert(loc);
   }
 
-  void ReportTemplateSpecTypeInternals(const TemplateSpecializationType*,
-                                       const set<const Type*>& types_to_block) =
-      delete;
+  void ReportElaboratedTypeUse(SourceLocation used_loc,
+                               const ElaboratedType* type,
+                               const set<const Type*>& types_to_block) = delete;
+
+  void ReportTemplateSpecTypeInternals(
+      const Type*, const set<const Type*>& types_to_block) = delete;
 
   // Do not add any variables here!  If you do, they will not be shared
   // between the normal iwyu ast visitor and the
@@ -3146,12 +3151,33 @@ class InstantiatedTemplateVisitor
     return Base::VisitCXXConstructExpr(expr);
   }
 
-  // --- Handler declared in IwyuBaseASTVisitor.
+  // --- Handlers declared in IwyuBaseASTVisitor.
+
+  void ReportElaboratedTypeUse(SourceLocation used_loc,
+                               const ElaboratedType* type,
+                               const set<const Type*>& types_to_block) {
+    if (NestedNameSpecifier* nns = type->getQualifier()) {
+      if (const auto* tmpl_type =
+              dyn_cast_or_null<TemplateSpecializationType>(nns->getAsType())) {
+        ValueSaver<map<const Type*, const Type*>> vs(
+            &resugar_map_, GetTplTypeResugarMapForClass(tmpl_type));
+        return ReportTypeUse(used_loc, type->getNamedType().getTypePtr(),
+                             types_to_block);
+      }
+    }
+    Base::ReportTypeUse(used_loc, type->getNamedType().getTypePtr(),
+                        types_to_block);
+  }
 
   void ReportTemplateSpecTypeInternals(
-      const TemplateSpecializationType* type,
-      const set<const Type*>& /*types_to_block*/) {
-    TraverseDataAndTypeMembersOfClassHelper(type);
+      const Type* type, const set<const Type*>& /*types_to_block*/) {
+    if (const auto* template_spec_type =
+            dyn_cast<TemplateSpecializationType>(type)) {
+      TraverseDataAndTypeMembersOfClassHelper(template_spec_type);
+    } else if (const auto* template_spec_type =
+                   dyn_cast<TemplateSpecializationType>(ResugarType(type))) {
+      TraverseDataAndTypeMembersOfClassHelper(template_spec_type);
+    }
   }
 
  private:
@@ -4153,10 +4179,18 @@ class IwyuAstConsumer
     return true;
   }
 
-  // --- Handler declared in IwyuBaseASTVisitor.
+  // --- Handlers declared in IwyuBaseASTVisitor.
 
-  void ReportTemplateSpecTypeInternals(const TemplateSpecializationType* type,
+  void ReportElaboratedTypeUse(SourceLocation used_loc,
+                               const ElaboratedType* type,
+                               const set<const Type*>& types_to_block) {
+    ReportTypeUse(used_loc, type->getNamedType().getTypePtr(), types_to_block);
+  }
+
+  void ReportTemplateSpecTypeInternals(const Type* type,
                                        const set<const Type*>& types_to_block) {
+    if (!isa<TemplateSpecializationType>(type))
+      return;
     const map<const Type*, const Type*> resugar_map = GetWithoutValuesFromSet(
         GetResugarMapWithoutProvidedTypes(GetTplTypeResugarMapForClass(type)),
         types_to_block);
