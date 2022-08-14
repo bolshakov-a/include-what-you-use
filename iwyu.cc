@@ -1576,9 +1576,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   void ReportAliasDeclUse(SourceLocation used_loc, const TypedefNameDecl* decl,
-                          const Type* underlying_type, UseKind use_kind) {
-    const set<const Type*>& provided_types =
+                          const Type* underlying_type, UseKind use_kind,
+                          const set<const Type*>& original_types_to_block) {
+    set<const Type*> types_to_block =
         GetProvidedTypesForTypedef(underlying_type, GetLocation(decl));
+    types_to_block.insert(original_types_to_block.begin(),
+                          original_types_to_block.end());
     VERRS(6) << "User, not author, of typedef "
              << decl->getQualifiedNameAsString()
              << " owns the underlying type:\n";
@@ -1591,11 +1594,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (use_kind == UseKind::Deref) {
         ReportTypeUse(used_loc,
                       RemovePointersAndReferencesAsWritten(underlying_type),
-                      UseKind::Direct, provided_types);
+                      UseKind::Direct, types_to_block);
       }
     } else {
       IwyuBaseAstVisitor<Derived>::ReportTypeUse(used_loc, underlying_type,
-                                                 use_kind, provided_types);
+                                                 use_kind, types_to_block);
     }
   }
 
@@ -1639,7 +1642,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (!current_ast_node()->template ParentIsA<TypedefNameDecl>()) {
         const TypedefNameDecl* decl = typedef_type->getDecl();
         ReportAliasDeclUse(used_loc, decl,
-                           decl->getUnderlyingType().getTypePtr(), use_kind);
+                           decl->getUnderlyingType().getTypePtr(), use_kind,
+                           types_to_block);
       }
     } else if (const auto* template_spec_type =
                    dyn_cast<TemplateSpecializationType>(type)) {
@@ -1648,7 +1652,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
             TypeToDeclAsWritten(template_spec_type));
         ReportAliasDeclUse(used_loc, decl->getTemplatedDecl(),
                            template_spec_type->getAliasedType().getTypePtr(),
-                           use_kind);
+                           use_kind, types_to_block);
       }
     }
 
