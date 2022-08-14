@@ -170,6 +170,7 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeducedTemplateSpecializationType;
+using clang::DeducedType;
 using clang::ElaboratedType;
 using clang::EnumConstantDecl;
 using clang::EnumDecl;
@@ -1656,6 +1657,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       }
     }
 
+    if (const auto* deduced_type = dyn_cast<DeducedType>(type))
+      type = deduced_type->getDeducedType().getTypePtr();
     if (IsPointerOrReferenceAsWritten(type)) {
       const Type* deref_type = RemovePointersAndReferencesAsWritten(type);
       switch (use_kind) {
@@ -2767,7 +2770,8 @@ class InstantiatedTemplateVisitor
 
   void HandleAliasInInstantiatedTemplate(
       const TypedefType* alias_type, ASTNode* caller_ast_node,
-      const map<const Type*, const Type*>& resugar_map) {
+      const map<const Type*, const Type*>& resugar_map,
+      const set<const Type*>& original_types_to_block = {}) {
     Clear();
     caller_ast_node_ = caller_ast_node;
     resugar_map_ = resugar_map;
@@ -2776,9 +2780,11 @@ class InstantiatedTemplateVisitor
 
     const TypedefNameDecl* typedef_decl = alias_type->getDecl();
     const Type* type = typedef_decl->getUnderlyingType().getTypePtr();
-    const set<const Type*>& provided_types =
+    set<const Type*> types_to_block =
         GetProvidedTypesForTypedef(type, GetLocation(typedef_decl));
-    ReportTypeUse(caller_loc(), type, UseKind::Direct, provided_types);
+    types_to_block.insert(original_types_to_block.begin(),
+                          original_types_to_block.end());
+    ReportTypeUse(caller_loc(), type, UseKind::Direct, types_to_block);
   }
 
   //------------------------------------------------------------
@@ -4257,8 +4263,20 @@ class IwyuAstConsumer
   void ReportElaboratedTypeUse(SourceLocation used_loc,
                                const ElaboratedType* type, UseKind use_kind,
                                const set<const Type*>& types_to_block) {
-    ReportTypeUse(used_loc, type->getNamedType().getTypePtr(), use_kind,
-                  types_to_block);
+    const Type* named_type = type->getNamedType().getTypePtr();
+    if (const auto* typedef_type = dyn_cast<TypedefType>(named_type)) {
+      NestedNameSpecifier* nns = type->getQualifier();
+      CHECK_(nns);
+      if (const TemplateSpecializationType* tmpl_type =
+              DynCastFrom(nns->getAsType())) {
+        instantiated_template_visitor_.HandleAliasInInstantiatedTemplate(
+            typedef_type, current_ast_node(),
+            GetTplTypeResugarMapForClass(tmpl_type), types_to_block);
+      }
+    } else {
+      ReportTypeUse(used_loc, type->getNamedType().getTypePtr(), use_kind,
+                    types_to_block);
+    }
   }
 
   void ReportTemplateSpecTypeInternals(const Type* type,
