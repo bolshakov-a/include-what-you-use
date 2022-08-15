@@ -1623,6 +1623,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
           used_loc, elaborated_type, use_kind, types_to_block);
     }
 
+    if (const auto* deduced_type = dyn_cast<DeducedType>(type))
+      type = deduced_type->getDeducedType().getTypePtr();
+
     if (isa<EnumType>(type))
       return;
 
@@ -1646,6 +1649,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                            decl->getUnderlyingType().getTypePtr(), use_kind,
                            types_to_block);
       }
+      return;
     } else if (const auto* template_spec_type =
                    dyn_cast<TemplateSpecializationType>(type)) {
       if (template_spec_type->isTypeAlias()) {
@@ -1654,11 +1658,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
         ReportAliasDeclUse(used_loc, decl->getTemplatedDecl(),
                            template_spec_type->getAliasedType().getTypePtr(),
                            use_kind, types_to_block);
+        return;
       }
     }
 
-    if (const auto* deduced_type = dyn_cast<DeducedType>(type))
-      type = deduced_type->getDeducedType().getTypePtr();
     if (IsPointerOrReferenceAsWritten(type)) {
       const Type* deref_type = RemovePointersAndReferencesAsWritten(type);
       switch (use_kind) {
@@ -4110,6 +4113,7 @@ class IwyuAstConsumer
         }
       }
       ReportTypeUse(CurrentLoc(), type, UseKind::Direct);
+      ReportDeclUse(CurrentLoc(), type->getDecl());
     }
     return Base::VisitTypedefType(type);
   }
@@ -4188,6 +4192,7 @@ class IwyuAstConsumer
         ReportDeclForwardDeclareUse(CurrentLoc(), TypeToDeclAsWritten(type));
       } else {
         ReportTypeUse(CurrentLoc(), type, UseKind::Direct);
+        ReportDeclUse(CurrentLoc(), TypeToDeclAsWritten(type));
       }
     }
 
