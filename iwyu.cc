@@ -3260,27 +3260,35 @@ class InstantiatedTemplateVisitor
   void ReportElaboratedTypeUse(
       SourceLocation used_loc, const ElaboratedType* type, UseKind use_kind,
       const set<const Type*>& original_types_to_block) {
-    if (!MapContainsValue(resugar_map_, type)) {
-      if (NestedNameSpecifier* nns = type->getQualifier()) {
-        if (const auto* tmpl_type =
-                dyn_cast_or_null<TemplateSpecializationType>(
-                    nns->getAsType())) {
-          if (const auto* typedef_type =
-                  dyn_cast<TypedefType>(type->getNamedType().getTypePtr())) {
-            const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
-            const Type* underlying_type =
-                typedef_decl->getUnderlyingType().getTypePtr();
-            set<const Type*> types_to_block = GetProvidedTypesForTypedef(
-                underlying_type, GetLocation(typedef_decl));
-            types_to_block.insert(original_types_to_block.begin(),
-                                  original_types_to_block.end());
-            // ValueSaver<map<const Type*, const Type*>> vs(
-            //     &resugar_map_, GetTplTypeResugarMapForClass(tmpl_type));
-            return ReportTypeUse(used_loc, underlying_type, use_kind,
-                                 types_to_block);
+    if (NestedNameSpecifier* nns = type->getQualifier()) {
+      if (const auto* tmpl_type =
+              dyn_cast_or_null<TemplateSpecializationType>(nns->getAsType())) {
+        if (const auto* typedef_type =
+                dyn_cast<TypedefType>(type->getNamedType().getTypePtr())) {
+          const TypedefNameDecl* typedef_decl = typedef_type->getDecl();
+          const Type* underlying_type =
+              typedef_decl->getUnderlyingType().getTypePtr();
+          set<const Type*> types_to_block = GetProvidedTypesForTypedef(
+              underlying_type, GetLocation(typedef_decl));
+          types_to_block.insert(original_types_to_block.begin(),
+                                original_types_to_block.end());
+          map<const Type*, const Type*> new_map =
+              GetTplTypeResugarMapForClass(tmpl_type);
+          for (std::pair<const Type* const, const Type*>& type_pair : new_map) {
+            if (resugar_map_.count(type_pair.second))
+              type_pair.second = resugar_map_.at(type_pair.second);
           }
-          // TODO: handle type aliases
+          new_map.insert(resugar_map_.begin(), resugar_map_.end());
+          ValueSaver<map<const Type*, const Type*>> vs(&resugar_map_, new_map);
+          if (MapContainsValue(resugar_map_, type)) {
+            // Avoid infinite loop.
+            return Base::ReportTypeUse(used_loc, underlying_type, use_kind,
+                                       types_to_block);
+          }
+          return ReportTypeUse(used_loc, underlying_type, use_kind,
+                               types_to_block);
         }
+        // TODO: handle type aliases
       }
     }
     Base::ReportTypeUse(used_loc, type->getNamedType().getTypePtr(), use_kind,
