@@ -2149,6 +2149,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     if (const Expr* owner_expr = GetFirstClassArgument(expr)) {
       const Type* owner_type = GetTypeOf(owner_expr);
+      if (const auto* cast_expr = dyn_cast<clang::ImplicitCastExpr>(owner_expr))
+        owner_type = GetTypeOf(cast_expr->getSubExprAsWritten());
       // Note we report the type use is the location of owner_expr
       // (the 'a' in 'a << b' or the 'MACRO' in 'MACRO << b'), rather
       // than our location (which is the '<<').  That way, we properly
