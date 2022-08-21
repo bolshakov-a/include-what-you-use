@@ -39,6 +39,13 @@ bool ContainsValue(const Container& container,
           != container.end());
 }
 
+template <typename Map>
+bool MapContainsValue(const Map& m, const typename Map::mapped_type& value) {
+  return std::find_if(m.begin(), m.end(), [&value](const auto& p) {
+           return p.second == value;
+         }) != m.end();
+}
+
 // For maps, we also let you check if the key exists with the given value.
 template <class Container, typename K, typename V>
 bool ContainsKeyValue(const Container& container,
