@@ -197,10 +197,8 @@ void TestTypeAliases() {
   // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
   TemplateNotProvidedArgumentUsed<IndirectStruct3> tnpau;
   // IWYU: IndirectStruct3 needs a declaration
-  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   TemplateProvidedArgumentNotUsed<IndirectStruct3> tpanu;
   // IWYU: IndirectStruct3 needs a declaration
-  // IWYU: IndirectStruct2 is...*iwyu_stricter_than_cpp-i2.h
   // IWYU: TplIndirectStruct3 is...*iwyu_stricter_than_cpp-i5.h
   TemplateNotProvidedArgumentNotUsed<IndirectStruct3> tnpanu;
 }

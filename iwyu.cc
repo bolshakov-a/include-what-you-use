@@ -1661,12 +1661,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     } else if (const auto* template_spec_type =
                    dyn_cast<TemplateSpecializationType>(type)) {
       if (template_spec_type->isTypeAlias()) {
-        const auto* decl = dyn_cast<clang::TypeAliasTemplateDecl>(
-            TypeToDeclAsWritten(template_spec_type));
-        ReportAliasDeclUse(used_loc, decl->getTemplatedDecl(),
-                           template_spec_type->getAliasedType().getTypePtr(),
-                           use_kind, types_to_block);
-        return;
+        return this->getDerived().ReportTypeAliasUse(
+            used_loc, template_spec_type, use_kind, types_to_block);
       }
     }
 
@@ -2653,6 +2649,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
                                const ElaboratedType* type, UseKind use_kind,
                                const set<const Type*>& types_to_block) = delete;
 
+  void ReportTypeAliasUse(SourceLocation used_loc,
+                          const TemplateSpecializationType* type,
+                          UseKind use_kind,
+                          const set<const Type*>& types_to_block) = delete;
+
   void ReportTemplateSpecTypeInternals(
       const Type*, const set<const Type*>& types_to_block) = delete;
 
@@ -2796,6 +2797,30 @@ class InstantiatedTemplateVisitor
     types_to_block.insert(original_types_to_block.begin(),
                           original_types_to_block.end());
     ReportTypeUse(caller_loc(), type, UseKind::Direct, types_to_block);
+  }
+
+  void HandleInstantiatedAliasTemplate(
+      const TemplateSpecializationType* type,
+      ASTNode* caller_ast_node,
+      const map<const Type*, const Type*>& resugar_map,
+      const set<const Type*>& original_types_to_block = {}) {
+    Clear();
+    caller_ast_node_ = caller_ast_node;
+    resugar_map_ = resugar_map;
+
+    set_current_ast_node(caller_ast_node);
+
+    CHECK_(type && type->isTypeAlias());
+
+    const auto* decl =
+        dyn_cast<clang::TypeAliasTemplateDecl>(TypeToDeclAsWritten(type));
+    const Type* underlying_type = type->getAliasedType().getTypePtr();
+    set<const Type*> types_to_block = GetProvidedTypesForTypedef(
+        underlying_type, GetLocation(decl->getTemplatedDecl()));
+    types_to_block.insert(original_types_to_block.begin(),
+                          original_types_to_block.end());
+    ReportTypeUse(caller_loc(), underlying_type, UseKind::Direct,
+                  types_to_block);
   }
 
   //------------------------------------------------------------
@@ -3244,6 +3269,22 @@ class InstantiatedTemplateVisitor
     }
     Base::ReportTypeUse(used_loc, type->getNamedType().getTypePtr(), use_kind,
                         types_to_block);
+  }
+
+  void ReportTypeAliasUse(SourceLocation used_loc,
+                          const TemplateSpecializationType* type,
+                          UseKind use_kind,
+                          const set<const Type*>& original_types_to_block) {
+    ValueSaver<map<const Type*, const Type*>> vs(
+        &resugar_map_, GetTplTypeResugarMapForClass(type));
+    const auto* decl =
+        dyn_cast<clang::TypeAliasTemplateDecl>(TypeToDeclAsWritten(type));
+    const Type* underlying_type = type->getAliasedType().getTypePtr();
+    set<const Type*> types_to_block = GetProvidedTypesForTypedef(
+        underlying_type, GetLocation(decl->getTemplatedDecl()));
+    types_to_block.insert(original_types_to_block.begin(),
+                          original_types_to_block.end());
+    return ReportTypeUse(used_loc, underlying_type, use_kind, types_to_block);
   }
 
   void ReportTemplateSpecTypeInternals(
@@ -4199,7 +4240,8 @@ class IwyuAstConsumer
       if (CanForwardDeclareType(current_ast_node())) {
         ReportDeclForwardDeclareUse(CurrentLoc(), TypeToDeclAsWritten(type));
       } else {
-        ReportTypeUse(CurrentLoc(), type, UseKind::Direct);
+        instantiated_template_visitor_.HandleInstantiatedAliasTemplate(
+            type, current_ast_node(), GetTplTypeResugarMapForClass(type));
         ReportDeclUse(CurrentLoc(), TypeToDeclAsWritten(type));
       }
     }
@@ -4290,6 +4332,15 @@ class IwyuAstConsumer
       ReportTypeUse(used_loc, type->getNamedType().getTypePtr(), use_kind,
                     types_to_block);
     }
+  }
+
+  void ReportTypeAliasUse(SourceLocation used_loc,
+                          const TemplateSpecializationType* type,
+                          UseKind use_kind,
+                          const set<const Type*>& types_to_block) {
+    instantiated_template_visitor_.HandleInstantiatedAliasTemplate(
+        type, current_ast_node(), GetTplTypeResugarMapForClass(type),
+        types_to_block);
   }
 
   void ReportTemplateSpecTypeInternals(const Type* type,
