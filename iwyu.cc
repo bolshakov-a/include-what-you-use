@@ -1425,6 +1425,14 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   set<const Type*> GetProvidedTypes(const Type* type, SourceLocation loc) {
     set<const Type*> retval;
     for (const Type* component : GetComponentsOfTypeWithoutSubstituted(type)) {
+      if (isa<TypedefType>(component))
+        continue;
+      if (const auto* template_spec_type =
+              dyn_cast<TemplateSpecializationType>(component)) {
+        if (template_spec_type->isTypeAlias())
+          continue;
+      }
+
       if (!CodeAuthorWantsJustAForwardDeclare(component, loc))
         retval.insert(component);
     }
