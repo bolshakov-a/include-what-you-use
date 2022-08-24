@@ -3315,8 +3315,12 @@ class InstantiatedTemplateVisitor
     return ReportTypeUse(used_loc, underlying_type, use_kind, types_to_block);
   }
 
-  void ReportTemplateSpecTypeInternals(
-      const Type* type, const set<const Type*>& /*types_to_block*/) {
+  void ReportTemplateSpecTypeInternals(const Type* type,
+                                       const set<const Type*>& types_to_block) {
+    std::map<const Type*, const Type*> new_map =
+        GetWithoutValuesFromSet(resugar_map_, types_to_block);
+    ValueSaver<map<const Type*, const Type*>> vs(&resugar_map_, new_map);
+
     if (const auto* template_spec_type =
             dyn_cast<TemplateSpecializationType>(type)) {
       TraverseDataAndTypeMembersOfClassHelper(template_spec_type);
