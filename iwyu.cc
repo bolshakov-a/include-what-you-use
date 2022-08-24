@@ -3274,9 +3274,13 @@ class InstantiatedTemplateVisitor
                                 original_types_to_block.end());
           map<const Type*, const Type*> new_map =
               GetTplTypeResugarMapForClass(tmpl_type);
-          for (std::pair<const Type* const, const Type*>& type_pair : new_map) {
-            if (resugar_map_.count(type_pair.second))
-              type_pair.second = resugar_map_.at(type_pair.second);
+          for (auto it = new_map.begin(), ite = new_map.end(); it != ite;) {
+            if (resugar_map_.count(it->second))
+              it->second = resugar_map_.at(it->second);
+            if (!resugar_map_.count(it->first))
+              it = new_map.erase(it);
+            else
+              ++it;
           }
           new_map.insert(resugar_map_.begin(), resugar_map_.end());
           ValueSaver<map<const Type*, const Type*>> vs(&resugar_map_, new_map);
