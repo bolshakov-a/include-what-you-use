@@ -60,6 +60,7 @@ using llvm::dyn_cast;
 using llvm::errs;
 using llvm::isa;
 using llvm::raw_string_ostream;
+using std::any_of;
 using std::map;
 using std::multimap;
 using std::pair;
@@ -1171,8 +1172,8 @@ static bool HasMapping(const string& symbol) {
   return !GlobalIncludePicker().GetCandidateHeadersForSymbol(symbol).empty();
 }
 
-void ProcessFullUse(OneUse* use,
-                    const IwyuPreprocessorInfo* preprocessor_info) {
+void ProcessFullUse(OneUse* use, const IwyuPreprocessorInfo* preprocessor_info,
+                    const vector<OneUse>& all_uses) {
   CHECK_(use->decl() && "Must call ProcessFullUse on a decl");
   CHECK_(use->is_full_use() && "Must not call ProcessFullUse on fwd-decl");
   if (use->ignore_use())   // we're already ignoring it
@@ -1345,6 +1346,17 @@ void ProcessFullUse(OneUse* use,
       VERRS(6) << "Ignoring use of " << use->symbol_name()
                << " (" << use->PrintableUseLoc() << "):"
                << " non-transitive #include\n";
+      use->set_ignore_use();
+      return;
+    }
+  }
+
+  // (B7)
+  if (const auto* ns_decl = dyn_cast<NamespaceDecl>(use->decl())) {
+    if (any_of(all_uses.begin(), all_uses.end(), [ns_decl](const OneUse& use) {
+          const NamedDecl* decl = use.decl();
+          return decl && IsInNamespace(decl, ns_decl);
+        })) {
       use->set_ignore_use();
       return;
     }
@@ -1590,7 +1602,7 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   }
   for (OneUse& use : *uses) {
     if (use.is_full_use() && use.decl())
-      internal::ProcessFullUse(&use, preprocessor_info_);
+      internal::ProcessFullUse(&use, preprocessor_info_, *uses);
   }
   for (OneUse& use : *uses) {
     if (use.is_full_use() && !use.decl())
