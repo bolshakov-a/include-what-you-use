@@ -1587,6 +1587,17 @@ void CalculateIwyuForFullUse(OneUse* use,
   }
 }
 
+set<string> ConvertBracketsToQuotes(const set<string>& includes) {
+  set<string> result;
+  for (string path : includes) {
+    CHECK_(path.size() > 2);
+    path.front() = '"';
+    path.back() = '"';
+    result.insert(path);
+  }
+  return result;
+}
+
 }  // namespace internal
 
 void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
@@ -1618,8 +1629,10 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // The 'effective' direct includes are defined to be the current
   // includes of associated, plus us.  This is only used to decide
   // when to give iwyu warnings.
-  const set<string> effective_direct_includes
-      = Union(associated_direct_includes, direct_includes());
+  set<string> effective_direct_includes =
+      Union(associated_direct_includes, direct_includes());
+  InsertAllInto(internal::ConvertBracketsToQuotes(effective_direct_includes),
+                &effective_direct_includes);
 
   // (C2) + (C3) Find the minimal 'set cover' for all symbol uses.
   const set<string> desired_set_cover = internal::CalculateMinimalIncludes(
@@ -1640,6 +1653,8 @@ void IwyuFileInfo::CalculateIwyuViolations(vector<OneUse>* uses) {
   // iwyu analysis done before us.
   set<string> effective_desired_includes = desired_includes();
   InsertAllInto(AssociatedDesiredIncludes(), &effective_desired_includes);
+  InsertAllInto(internal::ConvertBracketsToQuotes(effective_desired_includes),
+                &effective_desired_includes);
 
   // Now that we've figured out desired_includes, figure out iwyu violations.
   for (OneUse& use : *uses) {
@@ -2179,6 +2194,8 @@ size_t IwyuFileInfo::CalculateAndReportIwyuViolations() {
   // On the other hand, if foo.h used to have it but is removing it,
   // we *do* need to add it.
   set<string> associated_desired_includes = AssociatedDesiredIncludes();
+  InsertAllInto(internal::ConvertBracketsToQuotes(associated_desired_includes),
+                &associated_desired_includes);
 
   CalculateIwyuViolations(&symbol_uses_);
   EmitWarningMessages(symbol_uses_);
