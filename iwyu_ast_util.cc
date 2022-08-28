@@ -205,8 +205,7 @@ static const Type* DesugarAliasTypes(const Type* type) {
 }
 
 static bool IsImplicitConversionCtor(const CXXConstructorDecl* ctor) {
-  return !ctor->isExplicit() && ctor->getNumParams() == 1 &&
-         !ctor->isCopyOrMoveConstructor();
+  return !ctor->isExplicit() && !ctor->isCopyOrMoveConstructor();
 }
 
 }  // anonymous namespace

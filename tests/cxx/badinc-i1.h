@@ -62,7 +62,7 @@ class I1_Base {
 class I1_Class : public I1_Base {
  public:
   explicit I1_Class(int a) { a_ = a; }
-  I1_Class() { a_ = 1; }
+  explicit I1_Class() { a_ = 1; }
   // Call with T == I1_NamespaceClass, say.
   template<typename T> I1_Class(const T* obj, int dummy) : a_(obj->a) { }
   struct NestedStruct;    // defined below
