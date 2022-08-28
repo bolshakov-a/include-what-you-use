@@ -4308,7 +4308,9 @@ class IwyuAstConsumer
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
-    if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type)) {
+    const TemplateSpecializationType* template_spec_type =
+        GetAsTemplateSpecType(parent_type);
+    if (!IsTemplatizedFunctionDecl(callee) && !template_spec_type) {
       HandleFnReturnOnCallSite(callee);
       return true;
     }
@@ -4317,7 +4319,16 @@ class IwyuAstConsumer
         = GetTplTypeResugarMapForFunction(callee, calling_expr);
 
     if (parent_type) {    // means we're a method of a class
-      InsertAllInto(GetTplTypeResugarMapForClass(parent_type), &resugar_map);
+      InsertAllInto(GetTplTypeResugarMapForClass(template_spec_type),
+                    &resugar_map);
+    }
+
+    if (const TypedefType* typedef_type = GetAsTypedefType(parent_type)) {
+      const TypedefNameDecl* decl = typedef_type->getDecl();
+      resugar_map = GetWithoutValuesFromSet(
+          resugar_map,
+          GetProvidedTypesForTypedef(decl->getUnderlyingType().getTypePtr(),
+                                     GetLocation(decl)));
     }
 
     if (calling_expr &&
@@ -4328,8 +4339,8 @@ class IwyuAstConsumer
           resugar_map, GetProvidedTypesForAutocast(current_ast_node()));
     }
     instantiated_template_visitor_.ScanInstantiatedFunction(
-        callee, parent_type, current_ast_node(),
-        GetResugarMapWithoutProvidedTypes(resugar_map));
+        callee, template_spec_type ? template_spec_type : parent_type,
+        current_ast_node(), GetResugarMapWithoutProvidedTypes(resugar_map));
     return true;
   }
 
@@ -4408,6 +4419,12 @@ class IwyuAstConsumer
         !return_type->isEnumeralType()) {
       ReportTypeUse(CurrentLoc(), return_type, UseKind::Direct,
                     GetProvidedTypesForFnReturn(callee));
+
+      const Decl* decl = TypeToDeclAsWritten(GetCanonicalType(return_type));
+      if (const auto* record_decl = dyn_cast_or_null<CXXRecordDecl>(decl)) {
+        if (CXXDestructorDecl* dtor_decl = record_decl->getDestructor())
+          this->TraverseImplicitDestructorCall(dtor_decl, return_type);
+      }
     }
   }
 

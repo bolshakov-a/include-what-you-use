@@ -69,6 +69,7 @@ using clang::Decl;
 using clang::DeclContext;
 using clang::DeclRefExpr;
 using clang::DeclaratorDecl;
+using clang::DeducedType;
 using clang::DependentNameType;
 using clang::DependentScopeDeclRefExpr;
 using clang::DependentTemplateName;
@@ -1157,8 +1158,30 @@ const Type* RemoveElaboration(const Type* type) {
     return type;
 }
 
-bool IsTemplatizedType(const Type* type) {
-  return (type && isa<TemplateSpecializationType>(RemoveElaboration(type)));
+const TemplateSpecializationType* GetAsTemplateSpecType(const Type* type) {
+  if (!type)
+    return nullptr;
+
+  type = RemoveElaboration(type);
+  if (const auto* deduced_type = dyn_cast<DeducedType>(type))
+    return GetAsTemplateSpecType(deduced_type->getDeducedType().getTypePtr());
+  if (const auto* typedef_type = dyn_cast<TypedefType>(type)) {
+    return GetAsTemplateSpecType(
+        typedef_type->getDecl()->getUnderlyingType().getTypePtr());
+  }
+
+  return dyn_cast<TemplateSpecializationType>(type);
+}
+
+const TypedefType* GetAsTypedefType(const Type* type) {
+  if (!type)
+    return nullptr;
+
+  type = RemoveElaboration(type);
+  if (const auto* deduced_type = dyn_cast<DeducedType>(type))
+    return GetAsTypedefType(deduced_type->getDeducedType().getTypePtr());
+
+  return dyn_cast<TypedefType>(type);
 }
 
 bool IsClassType(const clang::Type* type) {

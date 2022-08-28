@@ -693,8 +693,10 @@ set<const clang::Type*> GetComponentsOfTypeWithoutSubstituted(
 // will both be removed.
 const clang::Type* RemoveElaboration(const clang::Type* type);
 
-// Returns true if the type has any template arguments.
-bool IsTemplatizedType(const clang::Type* type);
+const clang::TemplateSpecializationType* GetAsTemplateSpecType(
+    const clang::Type* type);
+
+const clang::TypedefType* GetAsTypedefType(const clang::Type* type);
 
 // Returns true if the type is a RecordType or a TemplateSpecializationType.
 bool IsClassType(const clang::Type* type);
