@@ -17,6 +17,7 @@
 
 class IndirectClass {
  public:
+  explicit IndirectClass() = default;
   void Method() const { };
   int a;
   static void StaticMethod() { };

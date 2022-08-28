@@ -298,7 +298,7 @@ template<class T = I1_Class, I1_Enum E = I11> class Cc_DeclareOnlyTemplateClass;
 
 // I2_Class has a non-explicit constructor (actually, two), so we need
 // the full type here even though it's a const reference.  I1_Class
-// has no implicit, one-argument constructor, so fwd declaring is ok.
+// has no implicit constructor, so fwd declaring is ok.
 // IWYU: I2_Class needs a declaration
 const I2_Class& Cc_Function(
     // IWYU: I1_Class needs a declaration

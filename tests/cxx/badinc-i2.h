@@ -24,6 +24,7 @@ enum I2_EnumForTypedefs { I21t, I22t, I23t, I2t_LAST = I23t };
 typedef I2_EnumForTypedefs I2_Typedef;
 
 struct I2_Struct {
+  explicit I2_Struct() = default;
   int a;
   float b;
   I2_Enum c;
