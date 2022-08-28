@@ -2274,12 +2274,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   // all exist in the same file -- which is pretty much always the
   // case, especially with a template calling a template -- we can do
   // an iwyu warning now, even without knowing the exact overload.
-  // In that case, we store the fact we warned, so we won't warn again
-  // when the template is instantiated.
   // TODO(csilvers): to be really correct, we should report *every*
   // overload that callers couldn't match via ADL.
   bool VisitOverloadExpr(clang::OverloadExpr* expr) {
-    // No CanIgnoreCurrentASTNode() check here!  It's later in the function.
+    if (CanIgnoreCurrentASTNode())
+      return true;
 
     // Make sure all overloads are in the same file.
     if (expr->decls_begin() == expr->decls_end())   // not sure this is possible
@@ -2315,19 +2314,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // end up being the built-in form of the operator.  (Even if the
     // only operator==() we see is in foo.h, we don't need to #include
     // foo.h if the only call to operator== we see is on two integers.)
-    if (arbitrary_fn_decl && !arbitrary_fn_decl->isOverloadedOperator()) {
-      AddProcessedOverloadLoc(CurrentLoc());
-      VERRS(7) << "Adding to processed_overload_locs: "
-               << PrintableCurrentLoc() << "\n";
-      // Because processed_overload_locs might be set in one visitor
-      // but used in another, each with a different definition of
-      // CanIgnoreCurrentASTNode(), we have to be conservative and set
-      // the has-considered flag always.  But of course we only
-      // actually report the function use if CanIgnoreCurrentASTNode()
-      // is *currently* false.
-      if (!CanIgnoreCurrentASTNode())
-        ReportDeclUse(CurrentLoc(), arbitrary_fn_decl);
-    }
+    if (arbitrary_fn_decl && !arbitrary_fn_decl->isOverloadedOperator())
+      ReportDeclUse(CurrentLoc(), arbitrary_fn_decl);
     return true;
   }
 
