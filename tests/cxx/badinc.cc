@@ -187,14 +187,11 @@ typedef I1_Class Cc_typedef_array[kI1ConstInt];
 // definition even of I2_Class, since we don't know if clients will be
 // using the no-arg Cc_tpl_typedef ctor, which requires the full
 // definition of I2_Class.
+// TODO: IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 // IWYU: I1_TemplateClass is...*badinc-i1.h.*#included\.
 // IWYU: I1_Class is...*badinc-i1.h
 // IWYU: I2_Class is...*badinc-i2.h
-// IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
 typedef I1_TemplateClass<I1_TemplateClass<I1_Class,I2_Class> > Cc_tpl_typedef;
-// TODO(csilvers): it would be nice to be able to take this line out and
-// still have the above tests pass:
-Cc_tpl_typedef cc_tpl_typedef;
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::I2_Class is...*badinc-i2-inl.h
 // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h

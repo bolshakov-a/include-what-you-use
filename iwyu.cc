@@ -2761,6 +2761,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     ReportWithAdditionalBlockedTypes(return_type,
                                      GetProvidedTypesForFnReturn(callee));
+
+    const Decl* decl = TypeToDeclAsWritten(GetCanonicalType(return_type));
+    if (const auto* record_decl = dyn_cast_or_null<CXXRecordDecl>(decl)) {
+      if (CXXDestructorDecl* dtor_decl = record_decl->getDestructor())
+        this->TraverseImplicitDestructorCall(dtor_decl, return_type);
+    }
   }
 
   void HandleAutocastOnCallSite(CXXConstructExpr* expr) {
@@ -4309,6 +4315,11 @@ class IwyuAstConsumer
       const TemplateInstantiationData class_data = GetTplInstData(parent_type);
       InsertAllInto(class_data.resugar_map, &data.resugar_map);
       InsertAllInto(class_data.provided_types, &data.provided_types);
+
+      if (const auto* typedef_type = parent_type->getAs<TypedefType>()) {
+        const TypedefNameDecl* decl = typedef_type->getDecl();
+        InsertAllInto(GetProvidedTypesForAlias(typedef_type->desugar().getTypePtr(), GetLocation(decl)), &data.provided_types);
+      }
     }
 
     if (IsAutocastExpr(current_ast_node())) {
