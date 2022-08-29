@@ -300,7 +300,7 @@ template<class T = I1_Class, I1_Enum E = I11> class Cc_DeclareOnlyTemplateClass;
 // the full type here even though it's a const reference.  I1_Class
 // has no implicit constructor, so fwd declaring is ok.
 // IWYU: I2_Class needs a declaration
-const I2_Class& Cc_Function(
+const I2_Class& Cc_FunctionPrototype(
     // IWYU: I1_Class needs a declaration
     const I1_Class& i1,
     // IWYU: I2_Class is...*badinc-i2.h.*for autocast
@@ -313,14 +313,31 @@ const I2_Class& Cc_Function(
     I2_Class& i2_nonconst,
     // Forward-declaring is ok because we a const reference to a *pointer*.
     // IWYU: I2_Class needs a declaration
-    I2_Class* const & i2_ptrref,
+    I2_Class* const& i2_ptrref,
+    // IWYU: I1_Class needs a declaration
+    I1_Class i1_nonref,
+    // IWYU: I2_Class is...*badinc-i2.h.*for autocast
+    I2_Class i2_nonref);
+
+// IWYU: I2_Class needs a declaration
+const I2_Class& Cc_Function(
+    // IWYU: I1_Class needs a declaration
+    const I1_Class& i1,
+    // No autocast assurance for function definitions.
+    // IWYU: I2_Class needs a declaration
+    const I2_Class& i2,
+    // IWYU: I2_Class needs a declaration
+    I2_Class& i2_nonconst,
+    // IWYU: I2_Class needs a declaration
+    I2_Class* const& i2_ptrref,
+    // Full passed-by-value parameter type is needed in function definition.
     // IWYU: I1_Class is...*badinc-i1.h
     I1_Class i1_nonref,
     // IWYU: I2_Class is...*badinc-i2.h
     I2_Class i2_nonref) {
   // IWYU: I2_Class is...*badinc-i2.h
   // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
-  static I2_Class retval;   // something we can safely return a reference to
+  static I2_Class retval;  // something we can safely return a reference to
   return retval;
 }
 

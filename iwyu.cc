@@ -1469,8 +1469,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     CHECK_(ast_node && "Should only check Autocast if under a CallExpr");
     const CallExpr* call_expr = ast_node->GetAs<CallExpr>();
     const FunctionDecl* fn_decl = call_expr->getDirectCallee();
-    if (!fn_decl)     // TODO(csilvers): what to do for fn ptrs and the like?
+    if (!fn_decl || fn_decl->isThisDeclarationADefinition()) {
+      // TODO(csilvers): what to do for fn ptrs and the like?
       return set<const Type*>();
+    }
 
     // Collect the non-explicit, one-arg constructor ('autocast') types.
     set<const Type*> autocast_types;
@@ -2598,7 +2600,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       return true;
 
     if (const FunctionDecl* decl = node->GetAncestorAs<FunctionDecl>()) {
-      if (IsFriendDecl(decl))
+      if (IsFriendDecl(decl) || decl->isThisDeclarationADefinition())
         return false;
       for (auto paramIt = decl->param_begin(); paramIt != decl->param_end();
            ++paramIt) {
@@ -2610,8 +2612,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       const Type* return_type = decl->getReturnType().getTypePtr();
       if (node->StackContainsContent(return_type)) {
         *comment = "(for fn return type)";
-        return !decl->isThisDeclarationADefinition() &&
-               !IsPointerOrReferenceAsWritten(return_type);
+        return !IsPointerOrReferenceAsWritten(return_type);
       }
     }
     return false;
