@@ -227,6 +227,7 @@ using clang::OverloadExpr;
 using clang::PPCallbacks;
 using clang::ParmVarDecl;
 using clang::PointerType;
+using clang::PredefinedExpr;
 using clang::Preprocessor;
 using clang::QualType;
 using clang::QualifiedTypeLoc;
@@ -3319,6 +3320,19 @@ class InstantiatedTemplateVisitor
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     ReportTypeUse(caller_loc(), actual_type, DerefKind::None);
     return Base::VisitCXXConstructExpr(expr);
+  }
+
+  bool VisitPredefinedExpr(PredefinedExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (expr->getIdentKind() != clang::PredefinedIdentKind::PrettyFunction)
+      return Base::VisitPredefinedExpr(expr);
+    for (const pair<const Type* const, const Type*>& resugar_pair :
+         resugar_map_) {
+      if (isa<EnumType>(resugar_pair.first))
+        ReportDeclUse(caller_loc(), TypeToDeclAsWritten(resugar_pair.first));
+    }
+    return Base::VisitPredefinedExpr(expr);
   }
 
   // --- Handler declared in IwyuBaseASTVisitor.
