@@ -124,6 +124,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
@@ -194,6 +195,7 @@ using clang::OverloadExpr;
 using clang::ParmVarDecl;
 using clang::PPCallbacks;
 using clang::PointerType;
+using clang::PredefinedExpr;
 using clang::QualType;
 using clang::QualifiedTypeLoc;
 using clang::RecordDecl;
@@ -3242,6 +3244,19 @@ class InstantiatedTemplateVisitor
     CHECK_(actual_type && "If !CanIgnoreType(), we should be resugar-able");
     ReportTypeUse(caller_loc(), actual_type, UseKind::Direct);
     return Base::VisitCXXConstructExpr(expr);
+  }
+
+  bool VisitPredefinedExpr(PredefinedExpr* expr) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (expr->getIdentKind() != PredefinedExpr::IdentKind::PrettyFunction)
+      return Base::VisitPredefinedExpr(expr);
+    for (const pair<const Type* const, const Type*>& resugar_pair :
+         resugar_map_) {
+      if (isa<EnumType>(resugar_pair.first))
+        ReportDeclUse(caller_loc(), TypeToDeclAsWritten(resugar_pair.first));
+    }
+    return Base::VisitPredefinedExpr(expr);
   }
 
   // --- Handlers declared in IwyuBaseASTVisitor.
