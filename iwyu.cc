@@ -3160,7 +3160,7 @@ class InstantiatedTemplateVisitor
         VERRS(6)
             << "Recursively traversing " << PrintableDecl(cts_decl)
             << " which was full-used and involves a known template param\n";
-        TraverseDecl(const_cast<ClassTemplateSpecializationDecl*>(cts_decl));
+        TraverseDataAndTypeMembers(cts_decl, type);
       }
     }
   }
@@ -3540,7 +3540,11 @@ class InstantiatedTemplateVisitor
     // calls, below, end up in the cache for class_decl.
     CacheStoringScope css(&cache_storers_, ClassMembersFullUseCache(),
                           class_decl, resugar_map_);
+    return TraverseDataAndTypeMembers(class_decl, type);
+  }
 
+  bool TraverseDataAndTypeMembers(
+      const ClassTemplateSpecializationDecl* class_decl, const Type* type) {
     for (DeclContext::decl_iterator it = class_decl->decls_begin();
          it != class_decl->decls_end(); ++it) {
       if (isa<CXXMethodDecl>(*it) || isa<FunctionTemplateDecl>(*it))
