@@ -3575,9 +3575,11 @@ class InstantiatedTemplateVisitor
         return false;
     }
 
-    for (const CXXBaseSpecifier& base : class_decl->bases()) {
-      if (!TraverseType(base.getType()))
-        return false;
+    if (class_decl->hasDefinition()) {
+      for (const CXXBaseSpecifier& base : class_decl->bases()) {
+        if (!TraverseType(base.getType()))
+          return false;
+      }
     }
 
     // Most methods on template classes are instantiated when they're
