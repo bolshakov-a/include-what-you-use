@@ -135,6 +135,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TypeTraits.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
@@ -218,6 +219,7 @@ using clang::TemplateSpecializationTypeLoc;
 using clang::TranslationUnitDecl;
 using clang::Type;
 using clang::TypeLoc;
+using clang::TypeTrait;
 using clang::TypedefDecl;
 using clang::TypedefNameDecl;
 using clang::TypedefType;
@@ -2088,11 +2090,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    // We assume that all type traits with >= 2 arguments require
-    // full type information even for pointer types. For example,
+    // We assume that all type traits with >= 2 arguments, except '__is_same',
+    // require full type information even for pointer types. For example,
     // this is the case for `__is_convertible_to` trait.
-    if (expr == nullptr || expr->getNumArgs() < 2)
+    if (expr == nullptr || expr->getNumArgs() < 2 ||
+        expr->getTrait() == TypeTrait::BTT_IsSame) {
       return true;
+    }
 
     for (const clang::TypeSourceInfo* arg : expr->getArgs()) {
       clang::QualType qual_type = arg->getType();
