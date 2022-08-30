@@ -1799,6 +1799,24 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool TraverseCXXMethodDecl(CXXMethodDecl* method_decl) {
+    if (method_decl->isThisDeclarationADefinition() ||
+        method_decl->size_overridden_methods() == 0) {
+      return Base::TraverseCXXMethodDecl(method_decl);
+    }
+
+    for (ParmVarDecl* param : method_decl->parameters()) {
+      if (!param->hasUninstantiatedDefaultArg()) {
+        if (Expr* default_arg = param->getDefaultArg()) {
+          if (!this->getDerived().TraverseStmt(default_arg))
+            return false;
+        }
+      }
+    }
+
+    return this->getDerived().VisitCXXMethodDecl(method_decl);
+  }
+
   // Special handling for C++ methods to detect covariant return types.
   // These are defined as a derived class overriding a method with a different
   // return type from the base.
