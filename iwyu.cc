@@ -3580,7 +3580,7 @@ class InstantiatedTemplateVisitor
 
     if (class_decl->hasDefinition()) {
       for (const CXXBaseSpecifier& base : class_decl->bases()) {
-        if (!TraverseType(base.getType()))
+        if (!TraverseTypeLoc(base.getTypeSourceInfo()->getTypeLoc()))
           return false;
       }
     }
