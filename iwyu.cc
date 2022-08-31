@@ -2793,8 +2793,9 @@ class InstantiatedTemplateVisitor
           const_cast<NamedDecl*>(type_decl_as_written));
     }
 
-    TraverseTemplateSpecializationType(
+    VisitTemplateSpecializationType(
         const_cast<TemplateSpecializationType*>(type));
+    TraverseTemplateSpecializationTypeHelper(type);
   }
 
   void HandleAliasInInstantiatedTemplate(
