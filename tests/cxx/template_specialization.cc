@@ -34,10 +34,12 @@ template <template<typename U> class T = Foo> struct TplTplStruct {
   T<int> u;
 };
 
+// IWYU: Foo is...*template_specialization-i2.h
 TplTplStruct<> tts;
 // TODO(csilvers): This should find the -i2.h location (for Foo<int>),
 // not -i1.h (for Foo<T>).
 // IWYU: Foo is...*template_specialization-i1.h
+// IWYU: Foo is...*template_specialization-i2.h
 TplTplStruct<Foo> tts2;
 
 

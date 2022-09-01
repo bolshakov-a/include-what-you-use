@@ -369,6 +369,7 @@ H_TemplateClass<I2_Enum> h_i2_template_class(I22);
 // TODO(csilvers): this should be attributed to the .h, since it comes
 // via a default template argument.
 // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass is...*badinc-i2.h
 H_TemplateTemplateClass<> h_templatetemlpate_class;
 H_TemplateTemplateClass<H_TemplateClass> h_i2_templatetemlpate_class;
 

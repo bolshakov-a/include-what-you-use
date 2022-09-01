@@ -66,10 +66,12 @@ FwdDeclUseArg<
 TemplateAsDefaultFull<> t5; // 5
 TemplateAsDefaultFwd<> t6; // 6
 
+// IWYU: Template is...*explicit_instantiation-template.h
 // IWYU: Template is...*template_short.h.*for explicit instantiation
 TemplateTemplateArgShortFull<
     // IWYU: Template is...*explicit_instantiation-template.h
     Template>
+    // IWYU: Template is...*explicit_instantiation-template.h
     t7; // 7
 
 TemplateTemplateArgShortFwd<

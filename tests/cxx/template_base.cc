@@ -35,6 +35,7 @@ struct InheritanceFromTplWithTMember : IndirectTemplate<T> {};
 
 // IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
+// IWYU: IndirectTemplate is...*indirect.h
 constexpr auto s2 = sizeof(InheritanceFromTplWithTMember<IndirectClass>);
 
 template <typename T>
