@@ -3394,7 +3394,7 @@ class InstantiatedTemplateVisitor
          ast_node != caller_ast_node_; ast_node = ast_node->parent()) {
       if (preprocessor_info().PublicHeaderIntendsToProvide(
               GetFileEntry(ast_node->GetLocation()),
-              GetFileEntry(decl->getLocation())))
+              GetLocFileEntry(GetInstantiationLoc(decl->getLocation()))))
         return ast_node->GetLocation();
     }
     return SourceLocation();   // an invalid source-loc
