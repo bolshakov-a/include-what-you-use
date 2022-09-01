@@ -591,7 +591,8 @@ void IwyuFileInfo::AddInclude(OptionalFileEntryRef includee,
   // does not have a header guard).  Ignore all but the first.
   // TODO(csilvers): could rewrite this so it's constant-time.
   for (const OneIncludeOrForwardDeclareLine& line : lines_) {
-    if (line.LineNumbersMatch(new_include)) {
+    if (line.LineNumbersMatch(new_include) &&
+        line.line() == new_include.line()) {
       VERRS(6) << "Ignoring repeated include: "
                << GetFilePath(file_) << ":" << linenumber
                << " -> " << GetFilePath(includee) << "\n";
