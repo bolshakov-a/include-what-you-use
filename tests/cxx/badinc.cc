@@ -609,6 +609,7 @@ H_TemplateStruct<I1_TemplateClass<int> > h_template_struct_tplclass_arg;
 // TODO(csilvers): this should be attributed to the .h, since it comes
 // via a default template argument.
 // IWYU: I2_TemplateClass::~I2_TemplateClass<.*> is...*badinc-i2-inl.h
+// IWYU: I2_TemplateClass is...*badinc-i2.h
 H_TemplateTemplateClass<> h_templatetemplateclass;
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class needs a declaration
@@ -1228,6 +1229,9 @@ int main() {
   // IWYU: I2_Class needs a declaration
   // IWYU: I2_Class is...*badinc-i2.h
   I1_TemplateMethodOnlyClass<I1_Class>::s<I2_Class*>(local_i2_class_ptr);
+  // I1_TemplateClass<int> explicit instantiation presense triggers
+  // I1_TemplateClass reporting.
+  // IWYU: I1_TemplateClass is...*badinc-i1.h
   // IWYU: I1_Class needs a declaration
   // IWYU: I1_Class is...*badinc-i1.h
   // IWYU: I2_Class needs a declaration
