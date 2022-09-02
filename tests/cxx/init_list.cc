@@ -17,6 +17,7 @@
 void Fn1(PODStruct);
 
 void Fn2() {
+  // No reporting of Part.
   // IWYU: PODStruct is...*init_list-i1.h
   Fn1({1, 2});
   // IWYU: PODStruct needs a declaration
