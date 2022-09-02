@@ -2338,7 +2338,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode())
       return true;
     const Type* type = GetTypeOf(expr);
-    ReportTypeUse(CurrentLoc(), type, DerefKind::None);
+    if (!current_ast_node()->template ParentIsA<InitListExpr>())
+      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
     return true;
   }
 
