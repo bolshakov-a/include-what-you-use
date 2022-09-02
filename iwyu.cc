@@ -2950,8 +2950,10 @@ class InstantiatedTemplateVisitor
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
-    for (CacheStoringScope* storer : cache_storers_)
-      storer->NoteReportedType(type, use_kind);
+    if (!types_to_block.count(type)) {
+      for (CacheStoringScope* storer : cache_storers_)
+        storer->NoteReportedType(type, use_kind);
+    }
     Base::ReportTypeUse(caller_loc(), type, use_kind, types_to_block);
   }
 
