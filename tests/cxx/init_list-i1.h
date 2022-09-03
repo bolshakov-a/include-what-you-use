@@ -7,10 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-struct Part {};
+struct PartAggregate {};
+
+struct PartNonAggregate {
+  PartNonAggregate() {
+  }
+};
 
 struct PODStruct {
   int i;
   int j;
-  Part p;
+  PartAggregate p1;
+  PartNonAggregate p2;
 };

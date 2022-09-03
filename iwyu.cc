@@ -2266,7 +2266,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Explicitly written CXXTemporaryObjectExpr are ignored here.
     if (expr->getStmtClass() == Stmt::StmtClass::CXXConstructExprClass) {
       const Type* type = expr->getType().getTypePtr();
-      if (!CanIgnoreType(type)) {
+      if (!CanIgnoreType(type) &&
+          !current_ast_node()->template ParentIsA<InitListExpr>()) {
         if (current_ast_node()->template HasAncestorOfType<CallExpr>()) {
           // 'Autocast' -- calling a one-arg, non-explicit constructor
           // -- is a special case when it's done for a function call.
