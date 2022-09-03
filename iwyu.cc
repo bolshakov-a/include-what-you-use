@@ -2180,6 +2180,9 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(),
                             expr->getConstructor());
 
+    if (current_ast_node()->template ParentIsA<InitListExpr>())
+      return true;
+
     if (IsAutocastExpr(current_ast_node()))
       HandleAutocastOnCallSite(expr);
     else
