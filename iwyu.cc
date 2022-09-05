@@ -4418,11 +4418,11 @@ class IwyuAstConsumer
         instantiated_template_visitor_.HandleAliasInInstantiatedTemplate(
             typedef_type, current_ast_node(),
             GetTplTypeResugarMapForClass(tmpl_type), types_to_block);
+        return;
       }
-    } else {
-      ReportTypeUse(used_loc, type->getNamedType().getTypePtr(), use_kind,
-                    types_to_block);
     }
+    ReportTypeUse(used_loc, type->getNamedType().getTypePtr(), use_kind,
+                  types_to_block);
   }
 
   void ReportTypeAliasUse(SourceLocation used_loc,
