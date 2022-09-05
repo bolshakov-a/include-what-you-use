@@ -1634,13 +1634,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     type = RemoveSubstTemplateTypeParm(type);
 
+    if (const auto* deduced_type = dyn_cast<DeducedType>(type))
+      type = deduced_type->getDeducedType().getTypePtr();
+
     if (const auto* elaborated_type = dyn_cast<ElaboratedType>(type)) {
       return this->getDerived().ReportElaboratedTypeUse(
           used_loc, elaborated_type, use_kind, types_to_block);
     }
-
-    if (const auto* deduced_type = dyn_cast<DeducedType>(type))
-      type = deduced_type->getDeducedType().getTypePtr();
 
     if (isa<EnumType>(type))
       return;
