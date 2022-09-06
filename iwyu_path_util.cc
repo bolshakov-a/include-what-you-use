@@ -188,7 +188,14 @@ string ConvertToQuotedInclude(const string& filepath,
   // Get path into same format as header search paths: Absolute and normalized.
   string path = NormalizeFilePath(MakeAbsolutePath(filepath));
 
-  // Case 1: Uses an explicit entry on the search path (-I) list.
+  // Case 1:
+  // Uses the implicit "-I <basename current file>" entry on the search path.
+  if (!includer_path.empty()) {
+    if (StripPathPrefix(&path, NormalizeDirPath(includer_path)))
+      return "\"" + path + "\"";
+  }
+
+  // Case 2: Uses an explicit entry on the search path (-I) list.
   const vector<HeaderSearchPath>& search_paths = HeaderSearchPaths();
   // HeaderSearchPaths is sorted to be longest-first, so this
   // loop will prefer the longest prefix: /usr/include/c++/4.4/foo
@@ -205,10 +212,6 @@ string ConvertToQuotedInclude(const string& filepath,
     }
   }
 
-  // Case 2:
-  // Uses the implicit "-I <basename current file>" entry on the search path.
-  if (!includer_path.empty())
-    StripPathPrefix(&path, NormalizeDirPath(includer_path));
   return "\"" + path + "\"";
 }
 
