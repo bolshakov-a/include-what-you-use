@@ -3131,7 +3131,6 @@
   { include: [ "@[\"<](QtCore/)?qmimedatabase\\.h[\">]", "private", "<QtCore>", "public" ] },
   { include: [ "@[\"<](QtCore/)?qmimetype\\.h[\">]", "private", "<QtCore>", "public" ] },
   { include: [ "@[\"<](QtCore/)?qmutex\\.h[\">]", "private", "<QtCore>", "public" ] },
-  { include: [ "@[\"<](QtCore/)?qnamespace\\.h[\">]", "private", "<QtCore>", "public" ] },
   { include: [ "@[\"<](QtCore/)?qnumeric\\.h[\">]", "private", "<QtCore>", "public" ] },
   { include: [ "@[\"<](QtCore/)?qobject\\.h[\">]", "private", "<QtCore>", "public" ] },
   { include: [ "@[\"<](QtCore/)?qobjectcleanuphandler\\.h[\">]", "private", "<QtCore>", "public" ] },
@@ -3853,4 +3852,5 @@
   { include: [ "@[\"<](QtQuick/)?qsgvertexcolormaterial\\.h[\">]", "private", "<QtQuick>", "public" ] },
   { include: [ "@[\"<](QtQuick/)?qtquickversion\\.h[\">]", "private", "<QtQuick>", "public" ] },
   { include: [ "<QString>", "public", "<QObject>", "public" ] },
+  { include: [ "<QFlags>", "public", "<Qt>", "public" ] },
 ]
