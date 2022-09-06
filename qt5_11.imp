@@ -3853,4 +3853,5 @@
   { include: [ "@[\"<](QtQuick/)?qtquickversion\\.h[\">]", "private", "<QtQuick>", "public" ] },
   { include: [ "<QString>", "public", "<QObject>", "public" ] },
   { include: [ "<QFlags>", "public", "<Qt>", "public" ] },
+  { include: [ "@[\"<](QtCore/)?qlist\\.h[\">]", "private", "<QStringList>", "public" ] },
 ]
