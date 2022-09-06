@@ -3851,5 +3851,6 @@
   { include: [ "@[\"<](QtQuick/)?qsgtexturematerial\\.h[\">]", "private", "<QtQuick>", "public" ] },
   { include: [ "@[\"<](QtQuick/)?qsgtextureprovider\\.h[\">]", "private", "<QtQuick>", "public" ] },
   { include: [ "@[\"<](QtQuick/)?qsgvertexcolormaterial\\.h[\">]", "private", "<QtQuick>", "public" ] },
-  { include: [ "@[\"<](QtQuick/)?qtquickversion\\.h[\">]", "private", "<QtQuick>", "public" ] }
+  { include: [ "@[\"<](QtQuick/)?qtquickversion\\.h[\">]", "private", "<QtQuick>", "public" ] },
+  { include: [ "<QString>", "public", "<QObject>", "public" ] },
 ]
