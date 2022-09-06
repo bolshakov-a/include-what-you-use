@@ -838,7 +838,7 @@
   { symbol: [ "QQueue", "private", "<QQueue>", "public" ] },
   { symbol: [ "QTranslator", "private", "<QTranslator>", "public" ] },
   { symbol: [ "QByteArrayDataPtr", "private", "<QByteArrayDataPtr>", "public" ] },
-  { symbol: [ "QStringLiteral", "private", "<QStringLiteral>", "public" ] },
+  { symbol: [ "QStringLiteral", "private", "<QString>", "public" ] },
   { symbol: [ "QXmlStreamAttributes", "private", "<QXmlStreamAttributes>", "public" ] },
   { symbol: [ "QParallelAnimationGroup", "private", "<QParallelAnimationGroup>", "public" ] },
   { symbol: [ "QPropertyAnimation", "private", "<QPropertyAnimation>", "public" ] },
