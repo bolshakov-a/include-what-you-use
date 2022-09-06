@@ -3516,9 +3516,6 @@ class InstantiatedTemplateVisitor
     if (type->isTypeAlias()) {
       ASTNode node(named_decl);
       CurrentASTNodeUpdater canu(&current_ast_node_, &node);
-      // Fwd-decl context for traversing type alias internals, similar to
-      // VisitTypedefNameDecl.
-      node.set_in_forward_declare_context(true);
       return TraverseType(type->getAliasedType());
     }
 
