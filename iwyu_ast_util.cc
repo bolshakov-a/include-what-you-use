@@ -54,6 +54,7 @@ using clang::CastExpr;
 using clang::CXXBindTemporaryExpr;
 using clang::CXXConstructExpr;
 using clang::CXXConstructorDecl;
+using clang::CXXDefaultArgExpr;
 using clang::CXXDeleteExpr;
 using clang::CXXDependentScopeMemberExpr;
 using clang::CXXDestructorDecl;
@@ -871,6 +872,8 @@ map<const Type*, const Type*> GetTplTypeResugarMapForFunction(
   //                 under it, take the pre-cast type instead?
   set<const Type*> fn_arg_types;
   for (unsigned i = 0; i < num_args; ++i) {
+    if (isa<CXXDefaultArgExpr>(fn_args[i]))
+      break;
     const Type* argtype = GetSugaredTypeOf(fn_args[i]);
     // TODO(csilvers): handle RecordTypes that are a TemplateSpecializationDecl
     InsertAllInto(GetComponentsOfType(argtype), &fn_arg_types);
