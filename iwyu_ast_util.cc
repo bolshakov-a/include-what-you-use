@@ -442,7 +442,10 @@ const DeclContext* GetDeclContext(const ASTNode* ast_node) {
 // --- Printers.
 
 string PrintableLoc(SourceLocation loc) {
-  return NormalizeFilePath(loc.printToString(*GlobalSourceManager()));
+  clang::SourceManager* sm = GlobalSourceManager();
+  return NormalizeFilePath(sm->getFilename(loc).str()) + '(' +
+         std::to_string(sm->getExpansionLineNumber(loc)) +
+         "):" + std::to_string(sm->getExpansionColumnNumber(loc));
 }
 
 string PrintableDecl(const Decl* decl, bool terse/*=true*/) {
