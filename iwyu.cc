@@ -1849,7 +1849,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     if (CanIgnoreCurrentASTNode()) return true;
 
     if (const Type* caught_type = stmt->getCaughtType().getTypePtrOrNull()) {
-      ReportTypeUse(CurrentLoc(), caught_type, UseKind::Deref);
+      if (!CanIgnoreType(caught_type))
+        ReportTypeUse(CurrentLoc(), caught_type, UseKind::Deref);
     } else {
       // catch(...): no type to act on here.
     }
