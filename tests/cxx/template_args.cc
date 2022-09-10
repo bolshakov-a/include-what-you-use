@@ -258,6 +258,21 @@ void TestParameterPack() {
 
 // ---------------------------------------------------------------
 
+template <typename T>
+struct TplUsingIndideMethod {
+  void Method() const {
+    (void)sizeof(T);
+  }
+};
+
+// IWYU: IndirectClass needs a declaration
+TplUsingIndideMethod<IndirectClass> GetTplUsingInsideMethod();
+
+void TestUsingInsideMethod() {
+  // IWYU: IndirectClass is...*indirect.h
+  GetTplUsingInsideMethod().Method();
+}
+
 /**** IWYU_SUMMARY
 
 tests/cxx/template_args.cc should add these lines:
