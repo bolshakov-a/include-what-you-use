@@ -15,16 +15,45 @@
 
 // Note all these structs have an 'autocast' constructor.
 
-struct DirectStruct1 { DirectStruct1(int) {} };
-struct DirectStruct2 { DirectStruct2(int) {} };
-struct DirectStruct3 { DirectStruct3(int) {} };
-struct DirectStruct4 { DirectStruct4(int) {} };
+struct DirectStruct1 {
+  DirectStruct1(int) {
+  }
+};
+struct DirectStruct2 {
+  DirectStruct2(int) {
+  }
+};
+struct DirectStruct3 {
+  DirectStruct3(int) {
+  }
+};
+struct DirectStruct4 {
+  DirectStruct4(int) {
+  }
+};
 struct IndirectStructForwardDeclaredInD1;
 
-template <typename T> struct TplDirectStruct1 { TplDirectStruct1(int) {} };
-template <typename T> struct TplDirectStruct2 { TplDirectStruct2(int) {} };
-template <typename T> struct TplDirectStruct3 { TplDirectStruct3(int) {} };
-template <typename T> struct TplDirectStruct4 { TplDirectStruct4(int) {} };
-template <typename T> struct TplIndirectStructForwardDeclaredInD1;
+template <typename T>
+struct TplDirectStruct1 {
+  TplDirectStruct1(int) {
+  }
+};
+template <typename T>
+struct TplDirectStruct2 {
+  TplDirectStruct2(int) {
+  }
+};
+template <typename T>
+struct TplDirectStruct3 {
+  TplDirectStruct3(int) {
+  }
+};
+template <typename T>
+struct TplDirectStruct4 {
+  TplDirectStruct4(int) {
+  }
+};
+template <typename T>
+struct TplIndirectStructForwardDeclaredInD1;
 
 #endif
