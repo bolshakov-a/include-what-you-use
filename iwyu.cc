@@ -1458,7 +1458,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
   // ast_node is the node for the autocast CastExpr.  We use it to get
   // the parent CallExpr to figure out what function is being called.
-  set<const Type*> GetCallerResponsibleTypesForAutocast(
+  set<const Type*> GetProvidedTypesForAutocast(
       const ASTNode* ast_node) const {
     while (ast_node && !ast_node->IsA<CallExpr>())
       ast_node = ast_node->parent();
@@ -1474,42 +1474,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
          param != fn_decl->param_end(); ++param) {
       const Type* param_type = GetTypeOf(*param);
       if (HasImplicitConversionConstructor(param_type)) {
-        const Type* deref_param_type =
-            RemovePointersAndReferencesAsWritten(param_type);
-        autocast_types.insert(Desugar(deref_param_type));
+        set<const Type*> components =
+            GetProvidedTypes(param_type, GetLocation(fn_decl));
+        autocast_types.insert(components.begin(), components.end());
       }
     }
 
-    // Now look at all the function decls that are visible from the
-    // call-location.  We keep only the autocast params that *all*
-    // the function decl authors want the caller to be responsible
-    // for.  We do this by elimination: start with all types, and
-    // remove them as we see authors providing the full type.
-    set<const Type*> retval = autocast_types;
-    for (FunctionDecl::redecl_iterator fn_redecl = fn_decl->redecls_begin();
-         fn_redecl != fn_decl->redecls_end(); ++fn_redecl) {
-      // Ignore function-decls that we can't see from the use-location.
-      if (!preprocessor_info().FileTransitivelyIncludes(
-              GetFileEntry(call_expr), GetFileEntry(*fn_redecl))) {
-        continue;
-      }
-      if (fn_redecl->isThisDeclarationADefinition() && !IsInHeader(*fn_redecl))
-        continue;
-      for (set<const Type*>::iterator it = retval.begin();
-           it != retval.end(); ) {
-        if (!CodeAuthorWantsJustAForwardDeclare(*it, GetLocation(*fn_redecl))) {
-          // set<> has nice property that erasing doesn't invalidate iterators.
-
-          retval.erase(it++);
-        } else {
-          ++it;
-        }
-      }
-    }
-
-    // TODO(csilvers): include template type-args of each entry of retval.
-
-    return retval;
+    return autocast_types;
   }
 
   set<const Type*> GetProvidedTypesForFnReturn(const FunctionDecl* decl) const {
@@ -2206,8 +2177,8 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitCXXConstructExpr(clang::CXXConstructExpr* expr) {
     if (CanIgnoreCurrentASTNode())
       return true;
-    ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(),
-                            expr->getConstructor());
+    const CXXConstructorDecl* decl = expr->getConstructor();
+    ReportIfReferenceVararg(expr->getArgs(), expr->getNumArgs(), decl);
 
     // 'Autocast' -- calling a one-arg, non-explicit constructor
     // -- is a special case when it's done for a function call.
@@ -2217,13 +2188,11 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // iwyu requirement, in which case we're responsible for the
     // casted-to type.  See IwyuBaseASTVisitor::VisitFunctionDecl.
     // Explicitly written CXXTemporaryObjectExpr are ignored here.
-    if (expr->getStmtClass() == Stmt::StmtClass::CXXConstructExprClass) {
+    if (expr->getStmtClass() == Stmt::StmtClass::CXXConstructExprClass &&
+        !decl->isCopyOrMoveConstructor()) {
       const Type* type = Desugar(expr->getType().getTypePtr());
-      if (current_ast_node()->template HasAncestorOfType<CallExpr>() &&
-          ContainsKey(GetCallerResponsibleTypesForAutocast(current_ast_node()),
-                      RemoveReferenceAsWritten(type))) {
-        ReportTypeUse(CurrentLoc(), type);
-      }
+      if (current_ast_node()->template HasAncestorOfType<CallExpr>())
+        HandleAutocastOnCallSite(type);
     }
 
     return true;
@@ -2757,6 +2726,13 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     merged_blocked.insert(blocked_types_.begin(), blocked_types_.end());
     ValueSaver<set<const Type*>> s(&blocked_types_, merged_blocked);
     ReportTypeUse(CurrentLoc(), return_type);
+  }
+
+  void HandleAutocastOnCallSite(const Type* type) {
+    set<const Type*> merged_blocked = GetProvidedTypesForAutocast(current_ast_node());
+    merged_blocked.insert(blocked_types_.begin(), blocked_types_.end());
+    ValueSaver<set<const Type*>> s(&blocked_types_, merged_blocked);
+    ReportTypeUse(CurrentLoc(), type);
   }
 
   // Do not add any variables here!  If you do, they will not be shared
@@ -4352,9 +4328,20 @@ class IwyuAstConsumer
       InsertAllInto(GetTplTypeResugarMapForClass(parent_type), &resugar_map);
     }
 
+    set<const Type*> provided_types =
+        ExtractProvidedTypeComponents(resugar_map);
+    if (calling_expr &&
+        calling_expr->getStmtClass() ==
+            Stmt::StmtClass::CXXConstructExprClass &&
+        current_ast_node()->template HasAncestorOfType<CallExpr>()) {
+      const set<const Type*> provided_for_autocast =
+          GetProvidedTypesForAutocast(current_ast_node());
+      provided_types.insert(provided_for_autocast.begin(),
+                            provided_for_autocast.end());
+    }
     instantiated_template_visitor_.ScanInstantiatedFunction(
         callee, parent_type, current_ast_node(), resugar_map,
-        ExtractProvidedTypeComponents(resugar_map));
+        provided_types);
     return true;
   }
 
