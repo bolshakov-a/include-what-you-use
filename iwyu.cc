@@ -257,6 +257,13 @@ bool CanIgnoreLocation(SourceLocation loc) {
           !ShouldReportIWYUViolationsFor(file_entry_after_macro_expansion));
 }
 
+struct UsedDeclData {
+  SourceLocation use_location;
+  const NamedDecl* decl;
+  UseFlags use_flags;
+  const char* comment;
+};
+
 }  // anonymous namespace
 
 enum class DerefKind { None, RemoveRefs, RemoveRefsAndPtr };
@@ -1507,9 +1514,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
-
-    preprocessor_info().FileInfoFor(used_in)->ReportFullSymbolUse(
-        used_loc, target_decl, use_flags, comment);
+    used_decls_.push_back({used_loc, target_decl, use_flags, comment});
 
     // Sometimes using a decl drags in a few other uses as well:
 
@@ -2470,6 +2475,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   set<const Type*> blocked_types_;
+  vector<UsedDeclData> used_decls_;
 
  private:
   template <typename T> friend class IwyuBaseAstVisitor;
@@ -2699,7 +2705,7 @@ class InstantiatedTemplateVisitor
   // about ourselves.  If it's in the resugar_map but with a nullptr
   // value, it's a default template parameter, that the
   // template-caller may or may not be responsible for.
-  void ScanInstantiatedFunction(
+  vector<UsedDeclData> ScanInstantiatedFunction(
       const FunctionDecl* fn_decl, const Type* parent_type,
       const ASTNode* caller_ast_node,
       const map<const Type*, const Type*>& resugar_map,
@@ -2717,12 +2723,13 @@ class InstantiatedTemplateVisitor
     set_current_ast_node(const_cast<ASTNode*>(caller_ast_node));
 
     TraverseExpandedTemplateFunctionHelper(fn_decl, parent_type);
+    return used_decls_;
   }
 
   // This isn't a Stmt, but sometimes we need to fully instantiate
   // a template class to get at a field of it, for instance:
   // MyClass<T>::size_type s;
-  void ScanInstantiatedType(ASTNode* caller_ast_node,
+  vector<UsedDeclData> ScanInstantiatedType(ASTNode* caller_ast_node,
                             const map<const Type*, const Type*>& resugar_map,
                             const set<const Type*>& blocked_types) {
     Clear();
@@ -2750,6 +2757,7 @@ class InstantiatedTemplateVisitor
 
     TraverseTemplateSpecializationType(
         const_cast<TemplateSpecializationType*>(type));
+    return used_decls_;
   }
 
   //------------------------------------------------------------
@@ -3170,6 +3178,7 @@ class InstantiatedTemplateVisitor
     traversed_decls_.clear();
     nodes_to_ignore_.clear();
     cache_storers_.clear();
+    used_decls_.clear();
   }
 
   // If we see the instantiated template using a type or decl (such as
@@ -3612,6 +3621,11 @@ class IwyuAstConsumer
     // There is no point in continuing when the AST is in a bad state.
     if (compiler()->getDiagnostics().hasUnrecoverableErrorOccurred())
       exit(EXIT_FAILURE);
+
+    for (const UsedDeclData& data : used_decls_){
+    preprocessor_info().FileInfoFor(GetFileEntry(data.use_location))->ReportFullSymbolUse(
+        data.use_location, data.decl, data.use_flags, data.comment);
+    }
 
     const set<const FileEntry*>* const files_to_report_iwyu_violations_for =
         preprocessor_info().files_to_report_iwyu_violations_for();
@@ -4088,9 +4102,10 @@ class IwyuAstConsumer
       const map<const Type*, const Type*> resugar_map =
           GetTplTypeResugarMapForClass(type);
 
-      instantiated_template_visitor_.ScanInstantiatedType(
+      const vector<UsedDeclData> decls = instantiated_template_visitor_.ScanInstantiatedType(
           current_ast_node(), resugar_map,
           ExtractProvidedTypeComponents(resugar_map));
+      used_decls_.insert(used_decls_.end(), decls.begin(), decls.end());
     }
 
     const auto [is_provided, comment] =
@@ -4181,8 +4196,9 @@ class IwyuAstConsumer
       provided_types.insert(provided_for_autocast.begin(),
                             provided_for_autocast.end());
     }
-    instantiated_template_visitor_.ScanInstantiatedFunction(
+    const vector<UsedDeclData> decls = instantiated_template_visitor_.ScanInstantiatedFunction(
         callee, parent_type, current_ast_node(), resugar_map, provided_types);
+    used_decls_.insert(used_decls_.end(), decls.begin(), decls.end());
     return true;
   }
 
@@ -4197,8 +4213,9 @@ class IwyuAstConsumer
     set<const Type*> merged_blocked =
         ExtractProvidedTypeComponents(resugar_map);
     merged_blocked.insert(blocked_types.begin(), blocked_types.end());
-    instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map,
+    const vector<UsedDeclData> decls = instantiated_template_visitor_.ScanInstantiatedType(&node, resugar_map,
                                                         merged_blocked);
+    used_decls_.insert(used_decls_.end(), decls.begin(), decls.end());
   }
 
  private:
