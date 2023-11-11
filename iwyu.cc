@@ -2748,15 +2748,22 @@ class InstantiatedTemplateVisitor
 
     // As in TraverseExpandedTemplateFunctionHelper, we ignore all AST nodes
     // that will be reported when we traverse the uninstantiated type.
+    vector<UsedDeclData> tpl_def_used_decls;
     if (const NamedDecl* type_decl_as_written =
             GetDefinitionAsWritten(TypeToDeclAsWritten(type))) {
       AstFlattenerVisitor nodeset_getter(compiler());
       nodes_to_ignore_ = nodeset_getter.GetNodesBelow(
           const_cast<NamedDecl*>(type_decl_as_written));
+      TraverseDecl(const_cast<NamedDecl*>(type_decl_as_written));
+      tpl_def_used_decls = used_decls_;
+      used_decls_.clear();
     }
 
     TraverseTemplateSpecializationType(
         const_cast<TemplateSpecializationType*>(type));
+    auto pred = [&tpl_def_used_decls](const UsedDeclData& data){return std::any_of(tpl_def_used_decls.begin(), tpl_def_used_decls.end(),
+                                                                                   [&data](const UsedDeclData& data2){return data2.decl == data.decl;});};
+    used_decls_.erase(std::remove_if(used_decls_.begin(), used_decls_.end(), pred), used_decls_.end());
     return used_decls_;
   }
 
@@ -3278,14 +3285,24 @@ class InstantiatedTemplateVisitor
         decl_as_written = fn_decl;
       }
     }
+    vector<UsedDeclData> tpl_def_used_decls;
     if (decl_as_written) {
       FunctionDecl* const daw = const_cast<FunctionDecl*>(decl_as_written);
       nodes_to_ignore_.AddAll(nodeset_getter.GetNodesBelow(daw));
+      if (daw != fn_decl){
+        ValueSaver<vector<UsedDeclData>> s(&used_decls_, {});
+        TraverseDecl(daw);
+        tpl_def_used_decls = used_decls_;
+      }
     }
 
     // We need to iterate over the function.
     if (!TraverseDecl(const_cast<FunctionDecl*>(fn_decl)))
       return false;
+
+    auto pred = [&tpl_def_used_decls](const UsedDeclData& data){return std::any_of(tpl_def_used_decls.begin(), tpl_def_used_decls.end(),
+                                                                                   [&data](const UsedDeclData& data2){return data2.decl == data.decl;});};
+    used_decls_.erase(std::remove_if(used_decls_.begin(), used_decls_.end(), pred), used_decls_.end());
 
     // If we're a constructor, we also need to construct the entire class,
     // even typedefs that aren't used at construct time. Try compiling
