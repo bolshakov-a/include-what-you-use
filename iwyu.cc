@@ -2759,8 +2759,8 @@ class InstantiatedTemplateVisitor
       used_decls_.clear();
     }
 
-    TraverseTemplateSpecializationType(
-        const_cast<TemplateSpecializationType*>(type));
+    ReportExplicitInstantiations(type);
+    TraverseDataAndTypeMembersOfClassHelper(type);
     auto pred = [&tpl_def_used_decls](const UsedDeclData& data){return std::any_of(tpl_def_used_decls.begin(), tpl_def_used_decls.end(),
                                                                                    [&data](const UsedDeclData& data2){return data2.decl == data.decl;});};
     used_decls_.erase(std::remove_if(used_decls_.begin(), used_decls_.end(), pred), used_decls_.end());
@@ -2798,7 +2798,7 @@ class InstantiatedTemplateVisitor
 
     switch (ignore_kind) {
       case IgnoreKind::ForUse:
-        if (!IsKnownTemplateParam(type))
+        if (IsProvidedByTemplate(type) && !IsKnownTemplateParam(type))
           return true;
         break;
       case IgnoreKind::ForExpansion:
