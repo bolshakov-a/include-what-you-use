@@ -189,6 +189,7 @@ using clang::LValueReferenceType;
 using clang::LinkageSpecDecl;
 using clang::MemberExpr;
 using clang::NamedDecl;
+using clang::NamespaceAliasDecl;
 using clang::NestedNameSpecifier;
 using clang::NestedNameSpecifierLoc;
 using clang::OverloadExpr;
@@ -1690,6 +1691,28 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     return true;
   }
 
+  bool VisitVarDecl(VarDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (!decl->isThisDeclarationADefinition() && decl->isStaticDataMember())
+      return true;
+    ReportTypeUse(CurrentLoc(), GetTypeOf(decl), DerefKind::None);
+    return true;
+  }
+
+  bool VisitCXXRecordDecl(CXXRecordDecl* decl) {
+    if (CanIgnoreCurrentASTNode())
+      return true;
+    if (!decl->hasDefinition())
+      return true;
+    for (const CXXBaseSpecifier& base : decl->bases()) {
+      const TypeLoc type_loc = base.getTypeSourceInfo()->getTypeLoc();
+      ReportTypeUse(GetLocation(&type_loc), type_loc.getTypePtr(),
+                    DerefKind::None);
+    }
+    return true;
+  }
+
   //------------------------------------------------------------
   // Visitors of types derived from clang::Stmt.
 
@@ -2354,9 +2377,10 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   bool VisitNestedNameSpecifier(NestedNameSpecifier* nns) {
     // If this is a NamespaceAlias, then mark the alias as used,
     // requiring whichever file(s) declare the alias.
-    if (nns->getKind() == NestedNameSpecifier::NamespaceAlias) {
-      ReportDeclUse(CurrentLoc(), nns->getAsNamespaceAlias());
-    }
+    if (const NamespaceAliasDecl* ns_alias = nns->getAsNamespaceAlias())
+      ReportDeclUse(CurrentLoc(), ns_alias);
+    else if (const Type* type = nns->getAsType())
+      ReportTypeUse(CurrentLoc(), type, DerefKind::None);
 
     if (!Base::VisitNestedNameSpecifier(nns))
       return false;
