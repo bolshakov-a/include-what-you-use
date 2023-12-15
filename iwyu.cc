@@ -2759,11 +2759,8 @@ class InstantiatedTemplateVisitor
       used_decls_.clear();
     }
 
-    ReportExplicitInstantiations(type);
-    TraverseDataAndTypeMembersOfClassHelper(type);
-    auto pred = [&tpl_def_used_decls](const UsedDeclData& data){return std::any_of(tpl_def_used_decls.begin(), tpl_def_used_decls.end(),
-                                                                                   [&data](const UsedDeclData& data2){return data2.decl == data.decl;});};
-    used_decls_.erase(std::remove_if(used_decls_.begin(), used_decls_.end(), pred), used_decls_.end());
+    TraverseTemplateSpecializationType(
+        const_cast<TemplateSpecializationType*>(type));
     return used_decls_;
   }
 
@@ -3373,13 +3370,30 @@ class InstantiatedTemplateVisitor
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);
 
+    vector<UsedDeclData> tpl_def_used_decls;
+    const NamedDecl* type_decl_as_written = GetDefinitionAsWritten(named_decl);
+    {
+        ValueSaver<vector<UsedDeclData>> s(&used_decls_, {});
+      TraverseDecl(const_cast<NamedDecl*>(type_decl_as_written));
+      tpl_def_used_decls = used_decls_;
+    }
     // If we have cached the reporting done for this decl before,
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
     if (ReplayUsesFromCache(*ClassMembersFullUseCache(),
-                            class_decl, caller_loc()))
+                            class_decl, caller_loc())) {
+      auto pred = [&tpl_def_used_decls](const UsedDeclData& data) {
+        return std::any_of(tpl_def_used_decls.begin(), tpl_def_used_decls.end(),
+                           [&data](const UsedDeclData& data2) {
+                             return data2.decl == data.decl;
+                           });
+      };
+      used_decls_.erase(
+          std::remove_if(used_decls_.begin(), used_decls_.end(), pred),
+          used_decls_.end());
       return true;
+    }
     if (ReplayClassMemberUsesFromPrecomputedList(type))
       return true;
 
@@ -3422,6 +3436,16 @@ class InstantiatedTemplateVisitor
         }
       }
     }
+
+    auto pred = [&tpl_def_used_decls](const UsedDeclData& data) {
+      return std::any_of(tpl_def_used_decls.begin(), tpl_def_used_decls.end(),
+                         [&data](const UsedDeclData& data2) {
+                           return data2.decl == data.decl;
+                         });
+    };
+    used_decls_.erase(
+        std::remove_if(used_decls_.begin(), used_decls_.end(), pred),
+        used_decls_.end());
 
     return true;
   }
