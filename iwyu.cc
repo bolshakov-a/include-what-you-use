@@ -2759,8 +2759,8 @@ class InstantiatedTemplateVisitor
       used_decls_.clear();
     }
 
-    TraverseTemplateSpecializationType(
-        const_cast<TemplateSpecializationType*>(type));
+    ReportExplicitInstantiations(type);
+    TraverseDataAndTypeMembersOfClassHelper(type);
     return used_decls_;
   }
 
@@ -3417,7 +3417,7 @@ class InstantiatedTemplateVisitor
     }
 
     for (const CXXBaseSpecifier& base : class_decl->bases()) {
-      if (!TraverseType(base.getType()))
+      if (!TraverseTypeLoc(base.getTypeSourceInfo()->getTypeLoc()))
         return false;
     }
 
