@@ -1514,6 +1514,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     const FileEntry* used_in = GetFileEntry(used_loc);
+
+    if (const auto* tpl_spec =
+            dyn_cast<ClassTemplateSpecializationDecl>(target_decl))
+      if (tpl_spec->getTemplateSpecializationKind() ==
+          clang::TSK_ImplicitInstantiation)
+        target_decl = GetInstantiatedFromDecl(tpl_spec);
     used_decls_.push_back({used_loc, target_decl, use_flags, comment});
 
     // Sometimes using a decl drags in a few other uses as well:
@@ -2748,16 +2754,12 @@ class InstantiatedTemplateVisitor
 
     // As in TraverseExpandedTemplateFunctionHelper, we ignore all AST nodes
     // that will be reported when we traverse the uninstantiated type.
-    vector<UsedDeclData> tpl_def_used_decls;
-    if (const NamedDecl* type_decl_as_written =
+    /* if (const NamedDecl* type_decl_as_written =
             GetDefinitionAsWritten(TypeToDeclAsWritten(type))) {
       AstFlattenerVisitor nodeset_getter(compiler());
       nodes_to_ignore_ = nodeset_getter.GetNodesBelow(
           const_cast<NamedDecl*>(type_decl_as_written));
-      TraverseDecl(const_cast<NamedDecl*>(type_decl_as_written));
-      tpl_def_used_decls = used_decls_;
-      used_decls_.clear();
-    }
+    }*/
 
     ReportExplicitInstantiations(type);
     TraverseDataAndTypeMembersOfClassHelper(type);
@@ -3371,7 +3373,7 @@ class InstantiatedTemplateVisitor
     traversed_decls_.insert(class_decl);
 
     vector<UsedDeclData> tpl_def_used_decls;
-    const NamedDecl* type_decl_as_written = GetDefinitionAsWritten(named_decl);
+    const NamedDecl* type_decl_as_written = GetInstantiatedFromDecl(class_decl);
     {
         ValueSaver<vector<UsedDeclData>> s(&used_decls_, {});
       TraverseDecl(const_cast<NamedDecl*>(type_decl_as_written));
