@@ -3124,8 +3124,14 @@ class InstantiatedTemplateVisitor
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    if (type->isTypeAlias())
-      return TraverseType(type->getAliasedType());
+    if (type->isTypeAlias()){
+      const auto old = current_ast_node()->in_forward_declare_context();
+      current_ast_node()->set_in_forward_declare_context(true);
+      if (!TraverseType(type->getAliasedType()))
+        return false;
+      current_ast_node()->set_in_forward_declare_context(old);
+      return true;
+    }
 
     // Skip the template traversal if this occurrence of the template name is
     // just a class qualifier for an out of line method, as opposed to an object
