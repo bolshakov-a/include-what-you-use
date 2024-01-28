@@ -2735,17 +2735,20 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     type = MapPrivateTypeToPublicType(type);
     // For the below, we want to be careful to call *our*
     // ReportDeclUse(), not any of the ones in subclasses.
+    const NamedDecl* decl = TypeToDeclAsWritten(type);
     if (const auto* template_spec_type =
             dyn_cast<TemplateSpecializationType>(Desugar(type))) {
       this->getDerived().ReportTplSpecComponentTypes(template_spec_type,
                                                      blocked_types);
+    } else if (const auto* spec_decl = dyn_cast_or_null<ClassTemplateSpecializationDecl>(decl)) {
+      this->getDerived().ReportTplSpecComponentTypes(spec_decl, blocked_types);
     }
     // Don't place 'blocked_types' check before 'ReportTplSpecComponentTypes'
     // because template may be provided (i. e. blocked) but its arguments may be
     // not.
     if (blocked_types.count(GetCanonicalType(type)))
       return;
-    if (const NamedDecl* decl = TypeToDeclAsWritten(type)) {
+    if (decl) {
       decl = GetDefinitionAsWritten(decl);
       VERRS(6) << "(For type " << PrintableType(type) << "):\n";
       IwyuBaseAstVisitor<Derived>::ReportDeclUse(used_loc, decl);
@@ -2938,6 +2941,27 @@ class InstantiatedTemplateVisitor
     VisitTemplateSpecializationType(
         const_cast<TemplateSpecializationType*>(type));
     TraverseTemplateSpecializationTypeHelper(type);
+  }
+
+  void ScanInstantiationDecl(
+      const ClassTemplateSpecializationDecl* decl,
+      ASTNode* caller_ast_node,
+      const map<const Type*, const Type*>& resugar_map,
+      const set<const Type*>& blocked_types) {
+    Clear();
+    caller_ast_node_ = caller_ast_node;
+    resugar_map_ = resugar_map;
+    blocked_types_ = blocked_types;
+
+    set_current_ast_node(caller_ast_node);
+
+    if (const NamedDecl* type_decl_as_written = GetDefinitionAsWritten(decl)) {
+      AstFlattenerVisitor nodeset_getter(compiler());
+      nodes_to_ignore_ = nodeset_getter.GetNodesBelow(
+          const_cast<NamedDecl*>(type_decl_as_written));
+    }
+
+    TraverseDataAndTypeMembersOfClassHelper(decl);
   }
 
   //------------------------------------------------------------
@@ -3375,6 +3399,10 @@ class InstantiatedTemplateVisitor
     TraverseDataAndTypeMembersOfClassHelper(type);
   }
 
+  void ReportTplSpecComponentTypes(const ClassTemplateSpecializationDecl* decl,
+                                   const set<const Type*>& blocked_types) {
+  }
+
   set<const Type*> GetProvidedByTplArg(const Type*) {
     // Already inside template instantiation analysis. Types provided
     // by template arguments should be in 'blocked_types_' set.
@@ -3551,14 +3579,18 @@ class InstantiatedTemplateVisitor
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);
 
+    if (ReplayClassMemberUsesFromPrecomputedList(type))
+      return true;
+    return TraverseDataAndTypeMembersOfClassHelper(class_decl);
+  }
+
+  bool TraverseDataAndTypeMembersOfClassHelper(const ClassTemplateSpecializationDecl* class_decl) {
     // If we have cached the reporting done for this decl before,
     // report again (but with the new caller_loc this time).
     // Otherwise, for all reporting done in the rest of this scope,
     // store in the cache for this function.
     if (ReplayUsesFromCache(*ClassMembersFullUseCache(),
                             class_decl, caller_loc()))
-      return true;
-    if (ReplayClassMemberUsesFromPrecomputedList(type))
       return true;
 
     // Sometimes, an implicit specialization occurs to be not instantiated.
@@ -4389,6 +4421,11 @@ class IwyuAstConsumer
     data.provided_types.insert(blocked_types.begin(), blocked_types.end());
     instantiated_template_visitor_.ScanInstantiatedType(&node, data.resugar_map,
                                                         data.provided_types);
+  }
+
+  void ReportTplSpecComponentTypes(const ClassTemplateSpecializationDecl* decl,
+                                   const set<const Type*>& blocked_types) {
+    instantiated_template_visitor_.ScanInstantiationDecl(decl, current_ast_node(), GetResugarMapForSpecDecl(decl), blocked_types);
   }
 
   set<const Type*> GetProvidedByTplArg(const Type* type) {

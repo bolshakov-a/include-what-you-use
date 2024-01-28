@@ -1601,6 +1601,17 @@ TemplateInstantiationData GetTplInstDataForClass(
       result.provided_types};
 }
 
+map<const Type*, const Type*> GetResugarMapForSpecDecl(const ClassTemplateSpecializationDecl* decl) {
+  map<const Type*, const Type*> res;
+  for(const auto& arg : decl->getTemplateArgs().asArray()) {
+    if (arg.getKind() != TemplateArgument::ArgKind::Type)
+      continue;
+    const Type* type = arg.getAsType().getCanonicalType().getTypePtr();
+    res.emplace(type, arg.getIsDefaulted() ? nullptr : type);
+  }
+  return ResugarTypeComponents(res);
+}
+
 bool CanBeOpaqueDeclared(const EnumType* type) {
   return type->getDecl()->isFixed();
 }

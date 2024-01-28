@@ -187,6 +187,9 @@ void ArgumentTypeProvision() {
 // IWYU: IndirectClass needs a declaration
 // IWYU: IndirectClass is...*indirect.h
 constexpr auto s3 = sizeof(Identity<IndirectClass>::SugaredType);
+// IWYU: IndirectClass needs a declaration
+// IWYU: IndirectClass is...*indirect.h
+constexpr auto s4 = sizeof(Identity<UsesAliasedParameter<IndirectClass>>::Type);
 
 /**** IWYU_SUMMARY
 

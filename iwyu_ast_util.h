@@ -837,6 +837,8 @@ TemplateInstantiationData GetTplInstDataForClass(
     const clang::Type* type,
     std::function<set<const clang::Type*>(const clang::Type*)> provided_getter);
 
+map<const clang::Type*, const clang::Type*> GetResugarMapForSpecDecl(const clang::ClassTemplateSpecializationDecl*);
+
 // Like GetTplInstDataForClass, but if a type has
 // components (for instance, 'Foo*' and 'vector<Foo>' both
 // have a component Foo), we don't include the components
