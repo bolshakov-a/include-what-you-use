@@ -3155,11 +3155,15 @@ class InstantiatedTemplateVisitor
       return true;
 
     if (type->isTypeAlias()){
-      const auto old = current_ast_node()->in_forward_declare_context();
+      const NamedDecl* decl = TypeToDeclAsWritten(type);
+      ASTNode* old_node = current_ast_node();
+      ASTNode node(decl);
+      node.SetParent(old_node);
+      set_current_ast_node(&node);
       current_ast_node()->set_in_forward_declare_context(true);
       if (!TraverseType(type->getAliasedType()))
         return false;
-      current_ast_node()->set_in_forward_declare_context(old);
+      set_current_ast_node(old_node);
       return true;
     }
 
