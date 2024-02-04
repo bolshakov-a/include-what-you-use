@@ -3093,8 +3093,16 @@ class InstantiatedTemplateVisitor
     if (CanIgnoreCurrentASTNode())
       return true;
 
-    if (type->isTypeAlias())
-      return TraverseType(type->getAliasedType());
+    if (type->isTypeAlias()) {
+      const NamedDecl* decl = TypeToDeclAsWritten(type);
+      ASTNode* old_node = current_ast_node();
+      ASTNode node(decl);
+      node.SetParent(old_node);
+      set_current_ast_node(&node);
+      if (!TraverseType(type->getAliasedType()))
+        return false;
+      set_current_ast_node(old_node);
+    }
 
     // Skip the template traversal if this occurrence of the template name is
     // just a class qualifier for an out of line method, as opposed to an object
