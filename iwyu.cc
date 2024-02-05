@@ -4389,6 +4389,15 @@ class IwyuAstConsumer
     if (!callee || CanIgnoreCurrentASTNode() || CanIgnoreDecl(callee))
       return true;
 
+    set<const Type*> additional_provided = GetProvidedByTplArg(parent_type);
+    parent_type = Desugar(parent_type);
+    if (const auto* typedef_type = dyn_cast_or_null<TypedefType>(parent_type)) {
+      const TypedefNameDecl* decl = typedef_type->getDecl();
+      const Type* underlying = typedef_type->desugar().getTypePtr();
+      InsertAllInto(GetProvidedTypesForAlias(underlying, GetLocation(decl)), &additional_provided);
+      parent_type = Desugar(underlying);
+    }
+
     if (!IsTemplatizedFunctionDecl(callee) && !IsTemplatizedType(parent_type))
       return true;
 
@@ -4398,11 +4407,7 @@ class IwyuAstConsumer
       const TemplateInstantiationData class_data = GetTplInstData(parent_type);
       InsertAllInto(class_data.resugar_map, &data.resugar_map);
       InsertAllInto(class_data.provided_types, &data.provided_types);
-
-      if (const auto* typedef_type = parent_type->getAs<TypedefType>()) {
-        const TypedefNameDecl* decl = typedef_type->getDecl();
-        InsertAllInto(GetProvidedTypesForAlias(typedef_type->desugar().getTypePtr(), GetLocation(decl)), &data.provided_types);
-      }
+      InsertAllInto(additional_provided, &data.provided_types);
     }
 
     if (IsAutocastExpr(current_ast_node())) {
