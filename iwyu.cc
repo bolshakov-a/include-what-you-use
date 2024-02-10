@@ -3250,8 +3250,7 @@ class InstantiatedTemplateVisitor
         VERRS(6) << "Recursively traversing " << PrintableDecl(cts_decl)
                  << " which was full-used and does not involve a known"
                  << " template param\n";
-        TraverseCXXRecordDecl(
-            const_cast<ClassTemplateSpecializationDecl*>(cts_decl));
+        TraverseDataAndTypeMembersOfClassHelper(cts_decl);
       }
     }
   }
