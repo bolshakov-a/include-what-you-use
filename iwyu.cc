@@ -2425,7 +2425,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
   }
 
   bool VisitTemplateSpecializationType(TemplateSpecializationType* type) {
-    if (CanIgnoreCurrentASTNode() || CanIgnoreType(type))
+    if (CanIgnoreCurrentASTNode())
       return true;
 
     const NamedDecl* decl = TypeToDeclAsWritten(type);
@@ -2437,7 +2437,7 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
     } else {
       if (type->isTypeAlias())
         ReportWrittenTypeAlias(type);
-      else
+      else if (!CanIgnoreType(type))
         ReportDeclUse(CurrentLoc(), decl);
     }
 
@@ -3100,6 +3100,14 @@ class InstantiatedTemplateVisitor
         type = type->getPointeeType().getTypePtr();
       }
     }
+    const Decl* decl = TypeToDeclForContent(type);
+    if (const auto* cts_decl =
+            dyn_cast_or_null<ClassTemplateSpecializationDecl>(decl)) {
+      if (!ContainsKey(traversed_decls_, decl)) {  // avoid recursion & repetition
+        traversed_decls_.insert(decl);
+        TraverseDataAndTypeMembersOfClassHelper(cts_decl);
+      }
+    }
     // clang desugars template types, so Foo<MyTypedef>() gets turned
     // into Foo<UnderlyingType>().  Try to convert back.
     type = ResugarType(type);
@@ -3580,12 +3588,13 @@ class InstantiatedTemplateVisitor
       return true;
     }
 
+    if (ReplayClassMemberUsesFromPrecomputedList(type))
+      return true;
+
     if (ContainsKey(traversed_decls_, class_decl))
       return true;   // avoid recursion & repetition
     traversed_decls_.insert(class_decl);
 
-    if (ReplayClassMemberUsesFromPrecomputedList(type))
-      return true;
     return TraverseDataAndTypeMembersOfClassHelper(class_decl);
   }
 

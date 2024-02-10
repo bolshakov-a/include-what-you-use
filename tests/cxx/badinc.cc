@@ -400,6 +400,7 @@ struct Cc_ImplicitConstructorStruct {
 // The implicit destructor for i1tc uses I2_Class.
 // IWYU: I2_Class is...*badinc-i2.h
 // IWYU: I2_Class::~I2_Class is...*badinc-i2-inl.h
+// IWYU: I1_Class is...*badinc-i1.h
 struct Cc_ImplicitInitializerStruct {
   // The implicit initializer of i1tc creates an I2_Class in the I1_TC ctor
   // IWYU: I1_Class is...*badinc-i1.h
