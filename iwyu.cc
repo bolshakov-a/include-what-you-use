@@ -1578,6 +1578,19 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
 
     UseFlags use_flags = ComputeUseFlags(current_ast_node());
 
+    if (const auto* tpl_decl = dyn_cast<clang::ClassTemplateDecl>(target_decl)) {
+      if (!tpl_decl->isThisDeclarationADefinition()) {
+        for (const auto redecl : tpl_decl->redecls()) {
+          if (const auto* tpl_redecl =
+                  dyn_cast<clang::ClassTemplateDecl>(redecl)) {
+            if (tpl_redecl->isThisDeclarationADefinition()) {
+              target_decl = tpl_redecl;
+              break;
+            }
+          }
+        }
+      }
+    }
     // Canonicalize the use location and report the use.
     used_loc = GetCanonicalUseLocation(used_loc, target_decl);
     OptionalFileEntryRef used_in = GetFileEntry(used_loc);
