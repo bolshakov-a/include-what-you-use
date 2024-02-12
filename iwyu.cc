@@ -832,8 +832,6 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       return true;
 
     if (FunctionDecl* fn_decl = DynCastFrom(expr->getDecl())) {
-      if (!IsImplicitlyInstantiatedDfn(fn_decl))
-        return true;
       if (const auto* call_expr =  // Skip intermediate ImplicitCastExpr node.
           current_ast_node_->GetAncestorAs<CallExpr>(2)) {
         if (call_expr->getDirectCallee() == fn_decl)
@@ -844,6 +842,8 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
       const Type* parent_type = nullptr;
       if (expr->getQualifier() && expr->getQualifier()->getAsType())
         parent_type = expr->getQualifier()->getAsType();
+      if (!IsTemplatizedType(parent_type) && !IsImplicitlyInstantiatedDfn(fn_decl))
+        return true;
       if (!this->getDerived().HandleFunctionCall(fn_decl, parent_type, expr))
         return false;
     }
