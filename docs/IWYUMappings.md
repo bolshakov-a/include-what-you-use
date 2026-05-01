@@ -115,17 +115,19 @@ header.
 Data for this directive is a list of four strings containing:
 
 * The symbol name to map from
-* The visibility of the symbol
+* The use kind of the symbol
 * The include name to map to
 * The visibility of the include name to map to
 
 For example;
 
-    { "symbol": ["NULL", "private", "<cstddef>", "public"] }
+    { "symbol": ["NULL", "full", "<cstddef>", "public"] }
 
-The symbol visibility is largely redundant -- it must always be `private`. It
-isn't entirely clear why symbol visibility needs to be specified, and it might
-be removed moving forward.
+The symbol use kind can be `full` or `fwd_decl`. `full` corresponds to uses that
+require complete type info for tag types. If `fwd_decl` mapping is specified,
+IWYU suggests to include the corresponding header instead of a forward-
+declaration. For backward compatibility with the old mapping file format,
+`private` is acceptable and is handled as `full` use kind.
 
 Unlike `include`, `symbol` directives do not support the `@`-prefixed regex
 syntax in the first entry. Track the [following
