@@ -124,10 +124,22 @@ For example;
     { "symbol": ["NULL", "full", "<cstddef>", "public"] }
 
 The symbol use kind can be `full` or `fwd_decl`. `full` corresponds to uses that
-require complete type info for tag types. If `fwd_decl` mapping is specified,
-IWYU suggests to include the corresponding header instead of a forward-
-declaration. For backward compatibility with the old mapping file format,
-`private` is acceptable and is handled as `full` use kind.
+require complete type info for tag types. As another example, consider class `X`
+defined in `"bits/x.h"`. Here is what IWYU would suggest for different mapping
+and use cases:
+
+|                     |       No mapping      | `["X", "full", "<x.h>", "public"]` | `["X", "fwd_decl", "<xfwd.h>", "public"]` |
+| ------------------- | --------------------- | ---------------------------------- | ----------------------------------------- |
+| Complete use of `X` | `#include "bits/x.h"` | `#include <x.h>`                   | `#include "bits/x.h"`                     |
+| Fwd-decl use of `X` | `class X;`            | `class X;`                         | `#include <xfwd.h>`                       |
+
+If you want the mapping both for complete type info and fwd-decl uses, specify
+the both entries in the mapping file.
+
+If `fwd_decl` mapping is specified, IWYU suggests to replace already present
+forward-declarations with the corresponding headers. For backward compatibility
+with the old mapping file format, `private` is acceptable and is handled as
+`full` use kind.
 
 Unlike `include`, `symbol` directives do not support the `@`-prefixed regex
 syntax in the first entry. Track the [following
