@@ -64,4 +64,23 @@ valarray<T> pow(const valarray<T>&, const typename valarray<T>::value_type&);
 float pow(float, float);
 double pow(double, double);
 long double pow(long double, long double);
+
+template <typename>
+struct char_traits;
+template <>
+struct char_traits<char> {};
+
+template <typename T, typename = char_traits<T>>
+class basic_ostream;
+template <typename, typename>
+class basic_ostream {};
+
+template <typename T, typename = char_traits<T>>
+class basic_spanstream;
+template <typename, typename>
+class basic_spanstream {};
+
+template <typename T, typename = char_traits<T>>
+class basic_fstream;
+using fstream = basic_fstream<char>;
 }
