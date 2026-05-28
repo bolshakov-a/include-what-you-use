@@ -810,6 +810,8 @@ bool IsDefTplArgSpecified(const clang::NamedDecl* tpl_param);
 
 unsigned GetTplParamNumberWithoutPack(const clang::TemplateDecl*);
 
+bool IsStdNonProvidingTypedef(const clang::TypedefNameDecl* decl);
+
 // --- Utilities for Type.
 
 // See if a given type is a 'real' elaborated type.  (An

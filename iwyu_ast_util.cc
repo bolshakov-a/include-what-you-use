@@ -1542,6 +1542,56 @@ unsigned GetTplParamNumberWithoutPack(const TemplateDecl* tpl) {
   return params->hasParameterPack() ? size - 1 : size;
 }
 
+bool IsStdNonProvidingTypedef(const TypedefNameDecl* decl) {
+  string name = GetWrittenQualifiedNameAsString(decl, /*with_fn_args=*/false);
+  static const set<string> typedefs = {
+    "std::ios",
+    "std::wios",
+    "std::streambuf",
+    "std::istream",
+    "std::ostream",
+    "std::iostream",
+    "std::stringbuf",
+    "std::istringstream",
+    "std::ostringstream",
+    "std::stringstream",
+    "std::spanbuf",
+    "std::ispanstream",
+    "std::ospanstream",
+    "std::spanstream",
+    "std::filebuf",
+    "std::ifstream",
+    "std::ofstream",
+    "std::fstream",
+    "std::syncbuf",
+    "std::osyncstream",
+    "std::wstreambuf",
+    "std::wistream",
+    "std::wostream",
+    "std::wiostream",
+    "std::wstringbuf",
+    "std::wistringstream",
+    "std::wostringstream",
+    "std::wstringstream",
+    "std::wspanbuf",
+    "std::wispanstream",
+    "std::wospanstream",
+    "std::wspanstream",
+    "std::wfilebuf",
+    "std::wifstream",
+    "std::wofstream",
+    "std::wfstream",
+    "std::wsyncbuf",
+    "std::wosyncstream",
+    "std::streampos",
+    "std::wstreampos",
+    "std::u8streampos",
+    "std::u16streampos",
+    "std::u32streampos",
+  };
+  return typedefs.count(name);
+}
+
 // --- Utilities for Type.
 
 bool IsElaboratedTypeSpecifier(const TypeWithKeyword* type) {
