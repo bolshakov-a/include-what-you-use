@@ -880,7 +880,7 @@ class BaseAstVisitor : public RecursiveASTVisitor<Derived> {
   }
 
  protected:
-  CompilerInstance* compiler() {
+  CompilerInstance* compiler() const {
     return compiler_;
   }
 
@@ -3602,6 +3602,12 @@ class IwyuBaseAstVisitor : public BaseAstVisitor<Derived> {
       if (construct->getNumArgs() == 1) {
         return GetProvidedByExpr(construct->getArg(0));
       }
+    } else if (const auto* member_expr = dyn_cast<MemberExpr>(expr)) {
+      // In C, types of member access expressions are always provided because
+      // there are no references or static members. Note that pointer types are
+      // also always complete, but the pointed-to types may be not.
+      if (!compiler()->getLangOpts().CPlusPlus)
+        return {GetCanonicalType(member_expr->getType().getTypePtr())};
     }
     return set<const Type*>{};
   }
